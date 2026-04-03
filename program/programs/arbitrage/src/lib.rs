@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 pub mod instructions {
 	pub mod execute_arbitrage;
+	pub mod flash_loan;
+	pub mod repay;
+	pub mod swap;
 	pub use execute_arbitrage::*;
 }
 

@@ -76,9 +76,12 @@ export async function executeSwap(
 			maxRetries: 2,
 		});
 
+		const latestBlockhash = await connection.getLatestBlockhash();
+
 		await withTimeout(
 			connection.confirmTransaction({
 				signature,
+				blockhash: latestBlockhash.blockhash,
 				lastValidBlockHeight: data.lastValidBlockHeight,
 			}),
 			settings.confirmTimeoutMs

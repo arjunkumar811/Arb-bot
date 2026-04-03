@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 
+use super::{flash_loan, repay, swap};
+
 #[derive(Accounts)]
 pub struct ExecuteArbitrage<'info> {
 	#[account(mut)]
@@ -24,16 +26,18 @@ pub fn execute_arbitrage(
 	minimum_profit: u64,
 	flash_loan_repayment: u64,
 ) -> Result<()> {
-	// Placeholder for swap CPI calls using remaining accounts.
-	// The swap CPIs are expected to mutate the token accounts before profit check.
+	flash_loan::borrow(&ctx.accounts.input_token_account, flash_loan_repayment)?;
+	flash_loan::validate_balance(&ctx.accounts.input_token_account, flash_loan_repayment)?;
+
+	swap::execute_swaps(ctx.remaining_accounts)?;
+
+	repay::repay(&ctx.accounts.output_token_account, flash_loan_repayment)?;
+
+	// Swap CPIs are expected to mutate token accounts before profit check.
 	let input_amount = ctx.accounts.input_token_account.amount;
 	let output_amount = ctx.accounts.output_token_account.amount;
 	let profit = output_amount.saturating_sub(input_amount);
 
-	require!(
-		output_amount >= flash_loan_repayment,
-		ArbitrageError::FlashLoanNotRepaid
-	);
 	require!(profit >= minimum_profit, ArbitrageError::NotProfitable);
 
 	emit!(ArbitrageExecuted {
@@ -49,6 +53,4 @@ pub fn execute_arbitrage(
 pub enum ArbitrageError {
 	#[msg("Arbitrage not profitable")]
 	NotProfitable,
-	#[msg("Flash loan repayment not satisfied")]
-	FlashLoanNotRepaid,
 }
