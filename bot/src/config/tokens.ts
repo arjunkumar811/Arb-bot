@@ -20,4 +20,9 @@ export const TOKENS: Record<string, TokenConfig> = {
 		mint: "Es9vMFrzaCERmJfrF4H2FYD4KJ7a1T1gWQn2qH6sV9e",
 		decimals: 6,
 	},
+	mSOL: {
+		symbol: "mSOL",
+		mint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+		decimals: 9,
+	},
 };

@@ -10,6 +10,15 @@ type Settings = {
 	priorityFeeMicroLamports: number;
 	computeUnitLimit: number;
 	flashLoanFeeBps: number;
+	swapFeeBps: number;
+	arbitrageProgramId: string;
+	inputTokenAccount: string;
+	outputTokenAccount: string;
+	tokenProgramId: string;
+	flashLoanProgramId: string;
+	flashLoanReserveAccount: string;
+	flashLoanLiquidityAccount: string;
+	flashLoanOwnerAccount: string;
 };
 
 function readNumber(value: string | undefined, fallback: number): number {
@@ -42,4 +51,13 @@ export const settings: Settings = {
 	),
 	computeUnitLimit: readNumber(process.env.COMPUTE_UNIT_LIMIT, 0),
 	flashLoanFeeBps: readNumber(process.env.FLASH_LOAN_FEE_BPS, 30),
+	swapFeeBps: readNumber(process.env.SWAP_FEE_BPS, 30),
+	arbitrageProgramId: process.env.ARB_PROGRAM_ID ?? "",
+	inputTokenAccount: process.env.INPUT_TOKEN_ACCOUNT ?? "",
+	outputTokenAccount: process.env.OUTPUT_TOKEN_ACCOUNT ?? "",
+	tokenProgramId: process.env.TOKEN_PROGRAM_ID ?? "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+	flashLoanProgramId: process.env.FLASH_LOAN_PROGRAM_ID ?? "",
+	flashLoanReserveAccount: process.env.FLASH_LOAN_RESERVE ?? "",
+	flashLoanLiquidityAccount: process.env.FLASH_LOAN_LIQUIDITY ?? "",
+	flashLoanOwnerAccount: process.env.FLASH_LOAN_OWNER ?? "",
 };
