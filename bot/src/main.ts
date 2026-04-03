@@ -1,11 +1,8 @@
 import { TOKENS } from "./config/tokens";
+import { settings } from "./config/settings";
 import { getQuote } from "./scanner/priceScanner";
 import { detectOpportunity } from "./scanner/opportunityDetector";
 import { executeSwap } from "./executor/swapExecutor";
-
-const LOOP_DELAY_MS = Number(process.env.LOOP_DELAY_MS ?? 5000);
-const MIN_PROFIT_THRESHOLD = BigInt(process.env.MIN_PROFIT_THRESHOLD ?? "0");
-const START_AMOUNT = BigInt(process.env.START_AMOUNT ?? "1000000");
 
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,7 +14,7 @@ async function run(): Promise<void> {
 			const firstQuote = await getQuote(
 				TOKENS.USDC.mint,
 				TOKENS.SOL.mint,
-				START_AMOUNT
+				settings.startAmount
 			);
 
 			const secondQuote = await getQuote(
@@ -27,9 +24,9 @@ async function run(): Promise<void> {
 			);
 
 			const opportunity = detectOpportunity(
-				START_AMOUNT,
+				settings.startAmount,
 				secondQuote.outAmount,
-				MIN_PROFIT_THRESHOLD
+				settings.minProfitThreshold
 			);
 
 			if (opportunity.isProfitable) {
@@ -45,7 +42,7 @@ async function run(): Promise<void> {
 			console.error("Loop error:", error);
 		}
 
-		await delay(LOOP_DELAY_MS);
+			await delay(settings.loopDelayMs);
 	}
 }
 

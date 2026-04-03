@@ -1,3 +1,5 @@
+import { settings } from "../config/settings";
+
 type QuoteResponse = {
 	inputMint: string;
 	outputMint: string;
@@ -25,7 +27,8 @@ export async function getQuote(
 	inputMint: string,
 	outputMint: string,
 	amount: bigint,
-	slippageBps = 50
+	slippageBps = settings.slippageBps,
+	timeoutMs = settings.quoteTimeoutMs
 ): Promise<PriceQuote> {
 	const params = new URLSearchParams({
 		inputMint,
@@ -34,7 +37,21 @@ export async function getQuote(
 		slippageBps: slippageBps.toString(),
 	});
 
-	const response = await fetch(`${JUPITER_QUOTE_URL}?${params.toString()}`);
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	let response: Response;
+	try {
+		response = await fetch(`${JUPITER_QUOTE_URL}?${params.toString()}`, {
+			signal: controller.signal,
+		});
+	} catch (error) {
+		if (controller.signal.aborted) {
+			throw new Error("Jupiter quote timed out");
+		}
+		throw error;
+	} finally {
+		clearTimeout(timer);
+	}
 	if (!response.ok) {
 		throw new Error(`Jupiter quote failed: ${response.status} ${response.statusText}`);
 	}

@@ -1,5 +1,7 @@
 import { VersionedTransaction } from "@solana/web3.js";
 import { connection, walletKeypair } from "../config/rpc";
+import { settings } from "../config/settings";
+import { retry, withTimeout } from "../utils/retry";
 
 type JupiterSwapResponse = {
 	swapTransaction: string;
@@ -15,14 +17,17 @@ export type SwapResult = {
 
 export async function executeSwap(
 	quoteResponse: unknown,
-	maxRetries = 3
+	maxRetries = settings.swapRetries
 ): Promise<SwapResult> {
-	let attempt = 0;
-	let lastError: Error | null = null;
+	const isSlippageError = (error: Error): boolean =>
+		error.message.toLowerCase().includes("slippage");
 
-	while (attempt < maxRetries) {
+	const performSwap = async (): Promise<SwapResult> => {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), settings.swapTimeoutMs);
+		let swapResponse: Response;
 		try {
-			const swapResponse = await fetch(JUPITER_SWAP_URL, {
+			swapResponse = await fetch(JUPITER_SWAP_URL, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -30,44 +35,56 @@ export async function executeSwap(
 					userPublicKey: walletKeypair.publicKey.toBase58(),
 					wrapAndUnwrapSol: true,
 				}),
+				signal: controller.signal,
 			});
-
-			if (!swapResponse.ok) {
-				const text = await swapResponse.text();
-				if (text.toLowerCase().includes("slippage")) {
-					throw new Error("Swap failed due to slippage");
-				}
-				throw new Error(`Jupiter swap failed: ${swapResponse.status} ${text}`);
+		} catch (error) {
+			if (controller.signal.aborted) {
+				throw new Error("Jupiter swap timed out");
 			}
+			throw error;
+		} finally {
+			clearTimeout(timer);
+		}
 
-			const data = (await swapResponse.json()) as JupiterSwapResponse;
-			if (!data.swapTransaction) {
-				throw new Error("Jupiter swap returned no transaction");
+		if (!swapResponse.ok) {
+			const text = await swapResponse.text();
+			if (text.toLowerCase().includes("slippage")) {
+				throw new Error("Swap failed due to slippage");
 			}
+			throw new Error(`Jupiter swap failed: ${swapResponse.status} ${text}`);
+		}
 
-			const tx = VersionedTransaction.deserialize(
-				Buffer.from(data.swapTransaction, "base64")
-			);
-			tx.sign([walletKeypair]);
+		const data = (await swapResponse.json()) as JupiterSwapResponse;
+		if (!data.swapTransaction) {
+			throw new Error("Jupiter swap returned no transaction");
+		}
 
-			const signature = await connection.sendTransaction(tx, {
-				maxRetries: 2,
-			});
+		const tx = VersionedTransaction.deserialize(
+			Buffer.from(data.swapTransaction, "base64")
+		);
+		tx.sign([walletKeypair]);
 
-			await connection.confirmTransaction({
+		const signature = await connection.sendTransaction(tx, {
+			maxRetries: 2,
+		});
+
+		await withTimeout(
+			connection.confirmTransaction({
 				signature,
 				lastValidBlockHeight: data.lastValidBlockHeight,
-			});
+			}),
+			settings.confirmTimeoutMs
+		);
 
-			return { signature, lastValidBlockHeight: data.lastValidBlockHeight };
-		} catch (error) {
-			lastError = error as Error;
-			attempt += 1;
-			if (attempt >= maxRetries) {
-				break;
-			}
-		}
-	}
+		return { signature, lastValidBlockHeight: data.lastValidBlockHeight };
+	};
 
-	throw lastError ?? new Error("Swap failed after retries");
+	return retry(performSwap, {
+		retries: Math.max(0, maxRetries - 1),
+		delayMs: 500,
+		backoffFactor: 2,
+		maxDelayMs: 5000,
+		jitter: 0.2,
+		shouldRetry: (error) => !isSlippageError(error),
+	});
 }
