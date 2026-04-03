@@ -34,6 +34,14 @@ export async function executeSwap(
 					quoteResponse,
 					userPublicKey: walletKeypair.publicKey.toBase58(),
 					wrapAndUnwrapSol: true,
+					prioritizationFeeLamports:
+						settings.priorityFeeMicroLamports > 0
+							? Math.floor(settings.priorityFeeMicroLamports / 1_000_000)
+							: undefined,
+					computeUnitLimit:
+						settings.computeUnitLimit > 0
+							? settings.computeUnitLimit
+							: undefined,
 				}),
 				signal: controller.signal,
 			});

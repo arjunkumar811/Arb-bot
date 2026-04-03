@@ -7,6 +7,8 @@ type Settings = {
 	swapTimeoutMs: number;
 	quoteTimeoutMs: number;
 	confirmTimeoutMs: number;
+	priorityFeeMicroLamports: number;
+	computeUnitLimit: number;
 };
 
 function readNumber(value: string | undefined, fallback: number): number {
@@ -33,4 +35,9 @@ export const settings: Settings = {
 	swapTimeoutMs: readNumber(process.env.SWAP_TIMEOUT_MS, 20000),
 	quoteTimeoutMs: readNumber(process.env.QUOTE_TIMEOUT_MS, 10000),
 	confirmTimeoutMs: readNumber(process.env.CONFIRM_TIMEOUT_MS, 30000),
+	priorityFeeMicroLamports: readNumber(
+		process.env.PRIORITY_FEE_MICROLAMPORTS,
+		0
+	),
+	computeUnitLimit: readNumber(process.env.COMPUTE_UNIT_LIMIT, 0),
 };
