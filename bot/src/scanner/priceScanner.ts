@@ -16,6 +16,7 @@ export type PriceQuote = {
 	outAmount: bigint;
 	price: number;
 	priceImpactPct: number;
+	route: QuoteResponse;
 };
 
 const JUPITER_QUOTE_URL = "https://quote-api.jup.ag/v6/quote";
@@ -56,5 +57,6 @@ export async function getQuote(
 		outAmount,
 		price,
 		priceImpactPct,
+		route: best,
 	};
 }
