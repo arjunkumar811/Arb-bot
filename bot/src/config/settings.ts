@@ -9,6 +9,7 @@ type Settings = {
 	confirmTimeoutMs: number;
 	priorityFeeMicroLamports: number;
 	computeUnitLimit: number;
+	flashLoanFeeBps: number;
 };
 
 function readNumber(value: string | undefined, fallback: number): number {
@@ -40,4 +41,5 @@ export const settings: Settings = {
 		0
 	),
 	computeUnitLimit: readNumber(process.env.COMPUTE_UNIT_LIMIT, 0),
+	flashLoanFeeBps: readNumber(process.env.FLASH_LOAN_FEE_BPS, 30),
 };
