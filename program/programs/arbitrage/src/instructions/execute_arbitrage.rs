@@ -16,11 +16,13 @@ pub struct ExecuteArbitrage<'info> {
 pub struct ArbitrageExecuted {
 	pub profit: u64,
 	pub final_amount: u64,
+	pub repayment_amount: u64,
 }
 
 pub fn execute_arbitrage(
 	ctx: Context<ExecuteArbitrage>,
 	minimum_profit: u64,
+	flash_loan_repayment: u64,
 ) -> Result<()> {
 	// Placeholder for swap CPI calls using remaining accounts.
 	// The swap CPIs are expected to mutate the token accounts before profit check.
@@ -28,11 +30,16 @@ pub fn execute_arbitrage(
 	let output_amount = ctx.accounts.output_token_account.amount;
 	let profit = output_amount.saturating_sub(input_amount);
 
+	require!(
+		output_amount >= flash_loan_repayment,
+		ArbitrageError::FlashLoanNotRepaid
+	);
 	require!(profit >= minimum_profit, ArbitrageError::NotProfitable);
 
 	emit!(ArbitrageExecuted {
 		profit,
 		final_amount: output_amount,
+		repayment_amount: flash_loan_repayment,
 	});
 
 	Ok(())
@@ -42,4 +49,6 @@ pub fn execute_arbitrage(
 pub enum ArbitrageError {
 	#[msg("Arbitrage not profitable")]
 	NotProfitable,
+	#[msg("Flash loan repayment not satisfied")]
+	FlashLoanNotRepaid,
 }

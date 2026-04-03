@@ -16,7 +16,8 @@ pub mod arbitrage {
 	pub fn execute_arbitrage(
 		ctx: Context<ExecuteArbitrage>,
 		minimum_profit: u64,
+		flash_loan_repayment: u64,
 	) -> Result<()> {
-		instructions::execute_arbitrage(ctx, minimum_profit)
+		instructions::execute_arbitrage(ctx, minimum_profit, flash_loan_repayment)
 	}
 }
