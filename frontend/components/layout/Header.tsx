@@ -1,3 +1,5 @@
+import { WalletStatus } from "../wallet";
+
 type HeaderProps = {
 	title: string;
 	subtitle?: string;
@@ -13,9 +15,7 @@ export function Header({ title, subtitle }: HeaderProps): JSX.Element {
 				) : null}
 			</div>
 			<div className="flex items-center gap-3">
-				<button className="rounded-lg border border-slate-700 px-4 py-2 text-xs text-slate-200 transition hover:border-emerald-500/40 hover:text-white">
-					Connect Wallet
-				</button>
+				<WalletStatus />
 				<div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
 					Bot: Stopped
 				</div>

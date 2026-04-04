@@ -1,30 +1,11 @@
+"use client";
+
 import { DashboardLayout } from "../../components/layout";
 import { TradeHistoryTable } from "../../components/trades/TradeHistoryTable";
+import { useTrades } from "../../hooks/useTrades";
 
 export default function TradesPage(): JSX.Element {
-	const trades = [
-		{
-			id: "TX-9021",
-			route: "SOL/USDC -> SOL",
-			profit: "+$12.40",
-			status: "Success",
-			time: "2m ago",
-		},
-		{
-			id: "TX-9018",
-			route: "mSOL/USDT -> mSOL",
-			profit: "+$7.12",
-			status: "Success",
-			time: "5m ago",
-		},
-		{
-			id: "TX-9012",
-			route: "SOL/USDT -> SOL",
-			profit: "-$3.25",
-			status: "Failed",
-			time: "12m ago",
-		},
-	];
+	const { trades } = useTrades();
 
 	return (
 		<DashboardLayout title="Trades" subtitle="Execution history and performance">
