@@ -3,6 +3,9 @@ import { ProfitCard } from "../../components/dashboard/ProfitCard";
 import { StatusCard } from "../../components/dashboard/StatusCard";
 import { OpportunityTable } from "../../components/dashboard/OpportunityTable";
 import { ProfitChart } from "../../components/dashboard/ProfitChart";
+import { StartBotButton } from "../../components/controls/StartBotButton";
+import { StopBotButton } from "../../components/controls/StopBotButton";
+import { SimulationToggle } from "../../components/controls/SimulationToggle";
 
 export default function DashboardPage(): JSX.Element {
 	const profitData = [
@@ -48,6 +51,12 @@ export default function DashboardPage(): JSX.Element {
 				<ProfitCard label="Profit Total" value="$18,330" trend="+4.1%" />
 				<StatusCard label="Active Routes" value="12" detail="Across Raydium, Orca" />
 				<StatusCard label="Success Rate" value="92.3%" detail="Last 24h" />
+			</div>
+
+			<div className="mt-6 flex flex-wrap items-center gap-3">
+				<StartBotButton />
+				<StopBotButton />
+				<SimulationToggle />
 			</div>
 
 			<div className="mt-6 grid gap-6 xl:grid-cols-3">
