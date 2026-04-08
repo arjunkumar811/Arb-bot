@@ -18,6 +18,9 @@ type Settings = {
 	flashLoanProgramId: string;
 	flashLoanReserveAccount: string;
 	flashLoanLiquidityAccount: string;
+	flashLoanFeeReceiverAccount: string;
+	flashLoanHostFeeReceiverAccount: string;
+	flashLoanLendingMarketAccount: string;
 	flashLoanOwnerAccount: string;
 };
 
@@ -59,5 +62,14 @@ export const settings: Settings = {
 	flashLoanProgramId: process.env.FLASH_LOAN_PROGRAM_ID ?? "",
 	flashLoanReserveAccount: process.env.FLASH_LOAN_RESERVE ?? "",
 	flashLoanLiquidityAccount: process.env.FLASH_LOAN_LIQUIDITY ?? "",
+	flashLoanFeeReceiverAccount: process.env.FLASH_LOAN_FEE_RECEIVER ?? "",
+	flashLoanHostFeeReceiverAccount:
+		process.env.FLASH_LOAN_HOST_FEE_RECEIVER ??
+		process.env.FLASH_LOAN_FEE_RECEIVER ??
+		"",
+	flashLoanLendingMarketAccount:
+		process.env.FLASH_LOAN_MARKET ??
+		process.env.FLASH_LOAN_OWNER ??
+		"",
 	flashLoanOwnerAccount: process.env.FLASH_LOAN_OWNER ?? "",
 };

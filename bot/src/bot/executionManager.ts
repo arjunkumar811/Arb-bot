@@ -70,18 +70,61 @@ export async function executePipeline(decision: StrategyDecision): Promise<void>
 	const flashLoanLiquidity = new PublicKey(
 		requireSetting(settings.flashLoanLiquidityAccount, "FLASH_LOAN_LIQUIDITY")
 	);
-	const flashLoanOwner = new PublicKey(
-		requireSetting(settings.flashLoanOwnerAccount, "FLASH_LOAN_OWNER")
+	const flashLoanFeeReceiver = new PublicKey(
+		requireSetting(settings.flashLoanFeeReceiverAccount, "FLASH_LOAN_FEE_RECEIVER")
+	);
+	const flashLoanHostFeeReceiver = new PublicKey(
+		requireSetting(
+			settings.flashLoanHostFeeReceiverAccount,
+			"FLASH_LOAN_HOST_FEE_RECEIVER"
+		)
+	);
+	const flashLoanMarket = new PublicKey(
+		requireSetting(settings.flashLoanLendingMarketAccount, "FLASH_LOAN_MARKET")
+	);
+	const inputTokenAccount = new PublicKey(
+		requireSetting(settings.inputTokenAccount, "INPUT_TOKEN_ACCOUNT")
+	);
+	const outputTokenAccount = new PublicKey(
+		requireSetting(settings.outputTokenAccount, "OUTPUT_TOKEN_ACCOUNT")
 	);
 
-	const flashLoanPlan = buildFlashLoanPlan({
-		programId: flashLoanProgramId,
-		amount: decision.scanResult.initialAmount,
-		feeBps: settings.flashLoanFeeBps,
-		reserveAccount: flashLoanReserve,
-		liquidityAccount: flashLoanLiquidity,
-		ownerAccount: flashLoanOwner,
-	});
+	const transaction = new Transaction();
+	const instructions: TransactionInstruction[] = [];
+
+	if (settings.computeUnitLimit > 0) {
+		instructions.push(
+			ComputeBudgetProgram.setComputeUnitLimit({
+				units: settings.computeUnitLimit,
+			})
+		);
+	}
+
+	if (settings.priorityFeeMicroLamports > 0) {
+		instructions.push(
+			ComputeBudgetProgram.setComputeUnitPrice({
+				microLamports: settings.priorityFeeMicroLamports,
+			})
+		);
+	}
+
+	const borrowInstructionIndex = instructions.length;
+	const flashLoanPlan = buildFlashLoanPlan(
+		{
+			programId: flashLoanProgramId,
+			amount: decision.scanResult.initialAmount,
+			feeBps: settings.flashLoanFeeBps,
+			reserveAccount: flashLoanReserve,
+			liquidityAccount: flashLoanLiquidity,
+			feeReceiverAccount: flashLoanFeeReceiver,
+			hostFeeReceiverAccount: flashLoanHostFeeReceiver,
+			lendingMarketAccount: flashLoanMarket,
+			destinationTokenAccount: inputTokenAccount,
+			sourceTokenAccount: outputTokenAccount,
+			userTransferAuthority: walletKeypair.publicKey,
+		},
+		borrowInstructionIndex
+	);
 
 	logFlashLoan(flashLoanPlan.repaymentAmount, "Flash loan requested");
 
@@ -90,25 +133,13 @@ export async function executePipeline(decision: StrategyDecision): Promise<void>
 		flashLoanPlan.repaymentAmount
 	);
 
-	const transaction = new Transaction();
+	instructions.push(
+		flashLoanPlan.borrowInstruction,
+		instruction,
+		flashLoanPlan.repayInstruction
+	);
 
-	if (settings.computeUnitLimit > 0) {
-		transaction.add(
-			ComputeBudgetProgram.setComputeUnitLimit({
-				units: settings.computeUnitLimit,
-			})
-		);
-	}
-
-	if (settings.priorityFeeMicroLamports > 0) {
-		transaction.add(
-			ComputeBudgetProgram.setComputeUnitPrice({
-				microLamports: settings.priorityFeeMicroLamports,
-			})
-		);
-	}
-
-	transaction.add(flashLoanPlan.instruction, instruction);
+	transaction.add(...instructions);
 
 	const latestBlockhash = await connection.getLatestBlockhash();
 	transaction.recentBlockhash = latestBlockhash.blockhash;

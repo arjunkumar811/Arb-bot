@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from "next/dynamic";
+
+const WalletMultiButton = dynamic(
+	async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
+	{ ssr: false }
+);
 
 export function WalletStatus(): JSX.Element {
 	const { connection } = useConnection();

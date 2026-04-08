@@ -26,7 +26,6 @@ pub fn execute_arbitrage(
 	minimum_profit: u64,
 	flash_loan_repayment: u64,
 ) -> Result<()> {
-	flash_loan::borrow(&ctx.accounts.input_token_account, flash_loan_repayment)?;
 	flash_loan::validate_balance(&ctx.accounts.input_token_account, flash_loan_repayment)?;
 
 	swap::execute_swaps(ctx.remaining_accounts)?;
