@@ -1,6 +1,7 @@
 "use client";
 
 import {	CartesianGrid,	Line,	LineChart,	ResponsiveContainer,	Tooltip,	XAxis,	YAxis,	} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 type ProfitPoint = {
 	time: string;
@@ -13,12 +14,13 @@ type ProfitChartProps = {
 
 export function ProfitChart({ data }: ProfitChartProps): JSX.Element {
 	return (
-		<div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
-			<div className="flex items-center justify-between">
-				<h3 className="text-sm font-semibold text-white">Profit Over Time</h3>
+		<Card className="bg-slate-900/70 shadow-lg">
+			<CardHeader className="flex flex-row items-center justify-between">
+				<CardTitle className="text-sm">Profit Over Time</CardTitle>
 				<span className="text-xs text-slate-500">Last 24h</span>
-			</div>
-			<div className="mt-4 h-64">
+			</CardHeader>
+			<CardContent className="pt-0">
+				<div className="h-64">
 				<ResponsiveContainer width="100%" height="100%">
 					<LineChart data={data}>
 						<CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
@@ -40,7 +42,8 @@ export function ProfitChart({ data }: ProfitChartProps): JSX.Element {
 						/>
 					</LineChart>
 				</ResponsiveContainer>
-			</div>
-		</div>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+
 type OpportunityRow = {
 	pair: string;
 	dexA: string;
@@ -12,12 +14,13 @@ type OpportunityTableProps = {
 
 export function OpportunityTable({ rows }: OpportunityTableProps): JSX.Element {
 	return (
-		<div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
-			<div className="flex items-center justify-between">
-				<h3 className="text-sm font-semibold text-white">Active Opportunities</h3>
+		<Card className="bg-slate-900/70 shadow-lg">
+			<CardHeader className="flex flex-row items-center justify-between">
+				<CardTitle className="text-sm">Active Opportunities</CardTitle>
 				<span className="text-xs text-slate-500">Live routes</span>
-			</div>
-			<div className="mt-4 overflow-x-auto">
+			</CardHeader>
+			<CardContent className="pt-0">
+				<div className="overflow-x-auto">
 				<table className="w-full text-left text-sm">
 					<thead className="text-xs uppercase tracking-wide text-slate-500">
 						<tr className="border-b border-slate-800">
@@ -40,7 +43,8 @@ export function OpportunityTable({ rows }: OpportunityTableProps): JSX.Element {
 						))}
 					</tbody>
 				</table>
-			</div>
-		</div>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

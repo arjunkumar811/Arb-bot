@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "../ui/button";
 
 export function StartBotButton(): JSX.Element {
 	const [loading, setLoading] = useState(false);
@@ -15,12 +16,8 @@ export function StartBotButton(): JSX.Element {
 	};
 
 	return (
-		<button
-			onClick={startBot}
-			className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
-			disabled={loading}
-		>
+		<Button onClick={startBot} disabled={loading} size="sm">
 			{loading ? "Starting..." : "Start Bot"}
-		</button>
+		</Button>
 	);
 }

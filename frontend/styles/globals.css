@@ -6,9 +6,38 @@
 
 :root {
 	color-scheme: dark;
+	--background: 222 47% 11%;
+	--foreground: 210 40% 96%;
+	--card: 221 39% 15%;
+	--card-foreground: 210 40% 96%;
+	--popover: 222 47% 11%;
+	--popover-foreground: 210 40% 96%;
+	--primary: 142 70% 45%;
+	--primary-foreground: 222 47% 11%;
+	--secondary: 215 28% 17%;
+	--secondary-foreground: 210 40% 96%;
+	--muted: 215 27% 19%;
+	--muted-foreground: 215 20% 65%;
+	--accent: 160 84% 39%;
+	--accent-foreground: 222 47% 11%;
+	--destructive: 0 62% 30%;
+	--destructive-foreground: 210 40% 96%;
+	--border: 215 27% 25%;
+	--input: 215 27% 25%;
+	--ring: 142 70% 45%;
+	--radius: 14px;
 }
 
 body {
 	@apply bg-slate-950 text-slate-100;
 	font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
 }

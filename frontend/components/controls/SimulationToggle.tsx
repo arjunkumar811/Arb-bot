@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "../ui/button";
 
 export function SimulationToggle(): JSX.Element {
 	const [enabled, setEnabled] = useState(false);
@@ -22,12 +23,8 @@ export function SimulationToggle(): JSX.Element {
 	};
 
 	return (
-		<button
-			onClick={toggle}
-			className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400 hover:text-white disabled:opacity-60"
-			disabled={loading}
-		>
+		<Button onClick={toggle} disabled={loading} size="sm" variant="outline">
 			{loading ? "Updating..." : enabled ? "Simulation: On" : "Simulation: Off"}
-		</button>
+		</Button>
 	);
 }

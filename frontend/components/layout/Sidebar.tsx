@@ -8,7 +8,7 @@ const navItems = [
 
 export function Sidebar(): JSX.Element {
 	return (
-		<aside className="flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900/80">
+		<aside className="flex min-h-screen w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900/80">
 			<div className="flex items-center gap-3 border-b border-slate-800 px-6 py-5">
 				<div className="h-9 w-9 rounded-lg bg-emerald-500/20" />
 				<div className="text-sm font-semibold text-white">

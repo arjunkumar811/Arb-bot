@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+
 type TradeRow = {
 	id: string;
 	route: string;
@@ -12,12 +14,13 @@ type TradeHistoryTableProps = {
 
 export function TradeHistoryTable({ rows }: TradeHistoryTableProps): JSX.Element {
 	return (
-		<div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
-			<div className="flex items-center justify-between">
-				<h3 className="text-sm font-semibold text-white">Trade History</h3>
+		<Card className="bg-slate-900/70 shadow-lg">
+			<CardHeader className="flex flex-row items-center justify-between">
+				<CardTitle className="text-sm">Trade History</CardTitle>
 				<span className="text-xs text-slate-500">Last 50</span>
-			</div>
-			<div className="mt-4 overflow-x-auto">
+			</CardHeader>
+			<CardContent className="pt-0">
+				<div className="overflow-x-auto">
 				<table className="w-full text-left text-sm">
 					<thead className="text-xs uppercase tracking-wide text-slate-500">
 						<tr className="border-b border-slate-800">
@@ -40,7 +43,8 @@ export function TradeHistoryTable({ rows }: TradeHistoryTableProps): JSX.Element
 						))}
 					</tbody>
 				</table>
-			</div>
-		</div>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
