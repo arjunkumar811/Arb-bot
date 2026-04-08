@@ -4,10 +4,12 @@ import fs from "fs";
 import http from "http";
 import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
+import { writeRuntimeSettings } from "./config/runtime";
 
 const PORT = Number(process.env.API_PORT ?? 3001);
 const LOG_FILE =
 	process.env.LOG_FILE ?? path.resolve(process.cwd(), "logs", "arb-bot.log");
+const ENV_PATH = path.resolve(process.cwd(), ".env");
 
 type BotStatus = {
 	status: "running" | "stopped" | "unknown";
@@ -41,6 +43,12 @@ type Trade = {
 	profit: string;
 	status: string;
 	time: string;
+};
+
+type WalletInitPayload = {
+	wallet: string;
+	usdcAccount: string;
+	usdtAccount: string;
 };
 
 type LogEntry = {
@@ -171,6 +179,26 @@ function buildStatus(): BotStatus {
 	};
 }
 
+function updateEnvFile(updates: Record<string, string>): void {
+	if (!fs.existsSync(ENV_PATH)) return;
+	const raw = fs.readFileSync(ENV_PATH, "utf-8");
+	let lines = raw.split(/\r?\n/);
+
+	for (const [key, value] of Object.entries(updates)) {
+		let updated = false;
+		lines = lines.map((line) => {
+			if (!line.trim().startsWith(`${key}=`)) return line;
+			updated = true;
+			return `${key}=${value}`;
+		});
+		if (!updated) {
+			lines.push(`${key}=${value}`);
+		}
+	}
+
+	fs.writeFileSync(ENV_PATH, lines.join("\n"), "utf-8");
+}
+
 function getSnapshot() {
 	const entries = readLogs();
 	return {
@@ -224,6 +252,35 @@ app.post("/api/settings", (req, res) => {
 	};
 	res.status(200).json({ ok: true });
 });
+
+const handleWalletInit = (req: express.Request, res: express.Response) => {
+	const { wallet, usdcAccount, usdtAccount } =
+		(req.body as WalletInitPayload) ?? {};
+
+	if (!wallet || !usdcAccount || !usdtAccount) {
+		res.status(400).json({ error: "wallet, usdcAccount, usdtAccount required" });
+		return;
+	}
+
+	process.env.INPUT_TOKEN_ACCOUNT = usdcAccount;
+	process.env.OUTPUT_TOKEN_ACCOUNT = usdtAccount;
+
+	updateEnvFile({
+		INPUT_TOKEN_ACCOUNT: usdcAccount,
+		OUTPUT_TOKEN_ACCOUNT: usdtAccount,
+	});
+
+	writeRuntimeSettings({
+		wallet,
+		inputTokenAccount: usdcAccount,
+		outputTokenAccount: usdtAccount,
+	});
+
+	res.status(200).json({ ok: true });
+};
+
+app.post("/api/wallet/init", handleWalletInit);
+app.post("/wallet/init", handleWalletInit);
 
 wss.on("connection", (socket) => {
 	clients.add(socket);

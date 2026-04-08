@@ -79,3 +79,17 @@ export function updateSettings(payload: Record<string, unknown>): Promise<void> 
 		body: JSON.stringify(payload),
 	});
 }
+
+export type WalletInitPayload = {
+	wallet: string;
+	usdcAccount: string;
+	usdtAccount: string;
+};
+
+export function initWallet(payload: WalletInitPayload): Promise<void> {
+	return fetchJson<void>("/api/wallet/init", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(payload),
+	});
+}

@@ -6,7 +6,7 @@ import {
 } from "@solana/web3.js";
 import crypto from "crypto";
 import { connection, walletKeypair } from "../config/rpc";
-import { settings } from "../config/settings";
+import { getSettings } from "../config/settings";
 import { buildFlashLoanPlan } from "../loan/flashLoanManager";
 import { logFlashLoan, logFailure, logInfo, logSuccess } from "../utils/logger";
 import { StrategyDecision } from "./strategyEngine";
@@ -57,6 +57,7 @@ function buildExecuteArbitrageInstruction(
 }
 
 export async function executePipeline(decision: StrategyDecision): Promise<void> {
+	const settings = getSettings();
 	if (!decision.shouldExecute || !decision.scanResult) {
 		throw new Error(decision.reason ?? "No profitable opportunity");
 	}
