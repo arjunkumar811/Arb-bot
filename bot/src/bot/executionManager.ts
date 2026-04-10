@@ -1,5 +1,11 @@
 import { executeFlashLoanArbitrage } from "../loan/flashLoanExecutor";
-import { logFlashLoan, logFailure, logInfo, logSuccess } from "../utils/logger";
+import {
+	logFlashLoan,
+	logFailure,
+	logInfo,
+	logSuccess,
+	logTransaction,
+} from "../utils/logger";
 import { StrategyDecision } from "./strategyEngine";
 
 export async function executePipeline(decision: StrategyDecision): Promise<void> {
@@ -10,6 +16,7 @@ export async function executePipeline(decision: StrategyDecision): Promise<void>
 	try {
 		const result = await executeFlashLoanArbitrage(decision);
 		logFlashLoan(result.repaymentAmount, "Flash loan requested");
+		logTransaction(result.signature, "flash-loan-arbitrage");
 		logSuccess(
 			"Arbitrage pipeline executed",
 			result.signature,

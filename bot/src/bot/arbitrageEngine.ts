@@ -1,5 +1,6 @@
 import { settings } from "../config/settings";
 import { buildDualRoute, SwapRoute } from "../dex/routeBuilder";
+import { logQuote } from "../utils/logger";
 
 export type ArbitrageResult = {
 	forward: SwapRoute;
@@ -22,6 +23,11 @@ export async function evaluateArbitrage(
 		inputMint,
 		outputMint,
 		amount
+	);
+
+	logQuote(
+		`forward=${forward.inputMint}:${forward.inAmount}->${forward.outputMint}:${forward.outAmount} ` +
+			`backward=${backward.inputMint}:${backward.inAmount}->${backward.outputMint}:${backward.outAmount}`
 	);
 
 	const initialAmount = amount;

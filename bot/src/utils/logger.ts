@@ -6,8 +6,10 @@ export type LogEntry = {
 	message: string;
 	profit?: string;
 	signature?: string;
+	transactionType?: string;
 	flashLoanAmount?: string;
 	swapDetails?: string;
+	quoteDetails?: string;
 	failureReason?: string;
 	timestamp: string;
 };
@@ -75,6 +77,25 @@ export function logSwap(signature: string, details: string): void {
 		message: "Swap executed",
 		signature,
 		swapDetails: details,
+		timestamp: new Date().toISOString(),
+	});
+}
+
+export function logQuote(details: string): void {
+	writeLog({
+		level: "info",
+		message: "Quote captured",
+		quoteDetails: details,
+		timestamp: new Date().toISOString(),
+	});
+}
+
+export function logTransaction(signature: string, transactionType: string): void {
+	writeLog({
+		level: "info",
+		message: "Transaction submitted",
+		signature,
+		transactionType,
 		timestamp: new Date().toISOString(),
 	});
 }
