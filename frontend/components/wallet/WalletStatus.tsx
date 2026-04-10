@@ -14,28 +14,28 @@ import {
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
 import { initWallet } from "../../lib/api";
+import {
+	SOLANA_CONFIG_ERROR,
+	USDC_MINT,
+} from "../../lib/solanaConfig";
 
 const WalletMultiButton = dynamic(
 	async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
 	{ ssr: false }
 );
 
-const USDC_MINT = "EPjFWdd5AufqSSqeM2q8kP9Rwx8wZMBZ9K9J8sWq5uV";
-const USDT_MINT = "Es9vMFrzaCERp8hZpC1ZK4n5Vf3L7h4r9JQq9VHtV";
 const MIN_SOL_BALANCE = 0.05;
 
 type WalletAccounts = {
 	address: string;
 	usdcAccount: string;
-	usdtAccount: string;
 };
 
 async function ensureMintOnCluster(
 	connection: Connection,
-	mintAddress: string,
+	mint: PublicKey,
 	label: string
 ): Promise<void> {
-	const mint = new PublicKey(mintAddress);
 	const info = await connection.getAccountInfo(mint);
 	if (!info) {
 		throw new Error(
@@ -51,16 +51,15 @@ async function ensureAssociatedTokenAccount(
 		transaction: Transaction,
 		connection: Connection
 	) => Promise<string>,
-	mintAddress: string,
+		mint: PublicKey,
 	label: string,
 	canCreate: boolean
 ): Promise<PublicKey> {
-	const mint = new PublicKey(mintAddress);
 	const ata = await getAssociatedTokenAddress(mint, owner);
 	const accountInfo = await connection.getAccountInfo(ata);
 
 	if (accountInfo) {
-		console.log(`${label} ATA ready`);
+			console.log(`${label} ATA detected`);
 		return ata;
 	}
 
@@ -79,7 +78,7 @@ async function ensureAssociatedTokenAccount(
 		);
 	}
 
-	console.log(`${label} ATA ready`);
+	console.log(`${label} ATA detected`);
 	return ata;
 }
 
@@ -92,6 +91,12 @@ export function WalletStatus(): JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 	const [warning, setWarning] = useState<string | null>(null);
 	const initRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		if (SOLANA_CONFIG_ERROR) {
+			setError(SOLANA_CONFIG_ERROR);
+		}
+	}, []);
 
 	useEffect(() => {
 		let active = true;
@@ -123,7 +128,15 @@ export function WalletStatus(): JSX.Element {
 			if (!publicKey || !connected) {
 				initRef.current = null;
 				setWalletInfo(null);
-				setError("Wallet not connected");
+				setError(SOLANA_CONFIG_ERROR ?? "Wallet not connected");
+				return;
+			}
+
+			if (SOLANA_CONFIG_ERROR || !USDC_MINT) {
+				setError(
+					SOLANA_CONFIG_ERROR ??
+						"Missing token mint. Set NEXT_PUBLIC_USDC_MINT."
+				);
 				return;
 			}
 
@@ -148,8 +161,6 @@ export function WalletStatus(): JSX.Element {
 				}
 
 				await ensureMintOnCluster(connection, USDC_MINT, "USDC");
-				await ensureMintOnCluster(connection, USDT_MINT, "USDT");
-
 				const usdcAta = await ensureAssociatedTokenAccount(
 					connection,
 					publicKey,
@@ -158,27 +169,17 @@ export function WalletStatus(): JSX.Element {
 					"USDC",
 					canCreate
 				);
-				const usdtAta = await ensureAssociatedTokenAccount(
-					connection,
-					publicKey,
-					sendTransaction,
-					USDT_MINT,
-					"USDT",
-					canCreate
-				);
 
 				if (!active) return;
 				const info: WalletAccounts = {
 					address: walletAddress,
 					usdcAccount: usdcAta.toBase58(),
-					usdtAccount: usdtAta.toBase58(),
 				};
 				setWalletInfo(info);
 
 				await initWallet({
 					wallet: info.address,
 					usdcAccount: info.usdcAccount,
-					usdtAccount: info.usdtAccount,
 				});
 			} catch (err) {
 				if (!active) return;
@@ -214,12 +215,6 @@ export function WalletStatus(): JSX.Element {
 					<span className="text-slate-500">USDC ATA</span>
 					<span className="break-all text-right text-slate-200">
 						{walletInfo?.usdcAccount ?? "--"}
-					</span>
-				</div>
-				<div className="mt-2 flex items-center justify-between gap-3">
-					<span className="text-slate-500">USDT ATA</span>
-					<span className="break-all text-right text-slate-200">
-						{walletInfo?.usdtAccount ?? "--"}
 					</span>
 				</div>
 				{loading ? (

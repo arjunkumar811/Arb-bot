@@ -87,3 +87,11 @@ Swap success: 5f9s2x...abc
 
 - This repo is devnet-first. Ensure token mint addresses are correct for devnet.
 - Flash-loan CPI wiring is intentionally minimal and should be extended before production use.
+
+
+
+
+
+// 1. dev net
+// 2. Token Account
+// 3. not only for usdt & usdc

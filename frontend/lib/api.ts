@@ -83,7 +83,6 @@ export function updateSettings(payload: Record<string, unknown>): Promise<void> 
 export type WalletInitPayload = {
 	wallet: string;
 	usdcAccount: string;
-	usdtAccount: string;
 };
 
 export function initWallet(payload: WalletInitPayload): Promise<void> {

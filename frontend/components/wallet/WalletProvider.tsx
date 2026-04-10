@@ -6,6 +6,7 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
+import { RPC_URL } from "../../lib/solanaConfig";
 
 type WalletContextProviderProps = {
 	children: ReactNode;
@@ -14,8 +15,7 @@ type WalletContextProviderProps = {
 export function WalletContextProvider({
 	children,
 }: WalletContextProviderProps): JSX.Element {
-	const endpoint =
-		process.env.NEXT_PUBLIC_RPC_URL ?? clusterApiUrl("devnet");
+	const endpoint = RPC_URL || clusterApiUrl("devnet");
 	const wallets = useMemo(
 		() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
 		[]

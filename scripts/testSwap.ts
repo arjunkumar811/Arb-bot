@@ -11,7 +11,7 @@ async function testSwap(): Promise<void> {
 	const quote = await getQuote(inputMint, outputMint, amount);
 	const result = await executeSwap(quote.route);
 
-	console.log("Swap success:", result.signature);
+	console.log("Swap success:", result.success, result.signature);
 }
 
 testSwap().catch((error) => {

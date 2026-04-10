@@ -5,15 +5,19 @@ import { ProfitCard } from "../../components/dashboard/ProfitCard";
 import { StatusCard } from "../../components/dashboard/StatusCard";
 import { OpportunityTable } from "../../components/dashboard/OpportunityTable";
 import { ProfitChart } from "../../components/dashboard/ProfitChart";
+import { QuoteCard } from "../../components/dashboard/QuoteCard";
 import { StartBotButton } from "../../components/controls/StartBotButton";
 import { StopBotButton } from "../../components/controls/StopBotButton";
 import { SimulationToggle } from "../../components/controls/SimulationToggle";
 import { useBotStatus } from "../../hooks/useBotStatus";
 import { useOpportunities } from "../../hooks/useOpportunities";
+import { useQuotes } from "../../hooks/useQuotes";
 
 export default function DashboardPage(): JSX.Element {
 	const { status, profit } = useBotStatus();
 	const { opportunities } = useOpportunities();
+	const { forward, reverse, loading: quotesLoading, error: quotesError } =
+		useQuotes();
 
 	const profitData =
 		profit?.history ?? [
@@ -58,6 +62,30 @@ export default function DashboardPage(): JSX.Element {
 				<StopBotButton />
 				<SimulationToggle />
 			</div>
+
+			<div className="mt-6 grid gap-6 xl:grid-cols-2">
+				<QuoteCard
+					title="USDC → SOL"
+					quote={forward}
+					inputSymbol="USDC"
+					outputSymbol="SOL"
+					inputDecimals={6}
+					outputDecimals={9}
+					loading={quotesLoading}
+				/>
+				<QuoteCard
+					title="SOL → USDC"
+					quote={reverse}
+					inputSymbol="SOL"
+					outputSymbol="USDC"
+					inputDecimals={9}
+					outputDecimals={6}
+					loading={quotesLoading}
+				/>
+			</div>
+			{quotesError ? (
+				<p className="mt-3 text-xs text-rose-400">{quotesError}</p>
+			) : null}
 
 			<div className="mt-6 grid gap-6 xl:grid-cols-3">
 				<div className="xl:col-span-2">

@@ -48,7 +48,6 @@ type Trade = {
 type WalletInitPayload = {
 	wallet: string;
 	usdcAccount: string;
-	usdtAccount: string;
 };
 
 type LogEntry = {
@@ -254,26 +253,22 @@ app.post("/api/settings", (req, res) => {
 });
 
 const handleWalletInit = (req: express.Request, res: express.Response) => {
-	const { wallet, usdcAccount, usdtAccount } =
-		(req.body as WalletInitPayload) ?? {};
+	const { wallet, usdcAccount } = (req.body as WalletInitPayload) ?? {};
 
-	if (!wallet || !usdcAccount || !usdtAccount) {
-		res.status(400).json({ error: "wallet, usdcAccount, usdtAccount required" });
+	if (!wallet || !usdcAccount) {
+		res.status(400).json({ error: "wallet, usdcAccount required" });
 		return;
 	}
 
 	process.env.INPUT_TOKEN_ACCOUNT = usdcAccount;
-	process.env.OUTPUT_TOKEN_ACCOUNT = usdtAccount;
 
 	updateEnvFile({
 		INPUT_TOKEN_ACCOUNT: usdcAccount,
-		OUTPUT_TOKEN_ACCOUNT: usdtAccount,
 	});
 
 	writeRuntimeSettings({
 		wallet,
 		inputTokenAccount: usdcAccount,
-		outputTokenAccount: usdtAccount,
 	});
 
 	res.status(200).json({ ok: true });
