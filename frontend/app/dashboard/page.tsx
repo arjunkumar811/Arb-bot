@@ -6,18 +6,22 @@ import { StatusCard } from "../../components/dashboard/StatusCard";
 import { OpportunityTable } from "../../components/dashboard/OpportunityTable";
 import { ProfitChart } from "../../components/dashboard/ProfitChart";
 import { QuoteCard } from "../../components/dashboard/QuoteCard";
+import { LastTradeCard } from "../../components/dashboard/LastTradeCard";
 import { StartBotButton } from "../../components/controls/StartBotButton";
 import { StopBotButton } from "../../components/controls/StopBotButton";
 import { SimulationToggle } from "../../components/controls/SimulationToggle";
 import { useBotStatus } from "../../hooks/useBotStatus";
 import { useOpportunities } from "../../hooks/useOpportunities";
 import { useQuotes } from "../../hooks/useQuotes";
+import { useTrades } from "../../hooks/useTrades";
 
 export default function DashboardPage(): JSX.Element {
 	const { status, profit } = useBotStatus();
 	const { opportunities } = useOpportunities();
 	const { forward, reverse, loading: quotesLoading, error: quotesError } =
 		useQuotes();
+	const { trades } = useTrades();
+	const lastTrade = trades[0] ?? null;
 
 	const profitData =
 		profit?.history ?? [
@@ -105,6 +109,15 @@ export default function DashboardPage(): JSX.Element {
 						<p>Execution Queue: 2 pending</p>
 					</div>
 				</div>
+			</div>
+
+			<div className="mt-6 grid gap-6 xl:grid-cols-2">
+				<LastTradeCard trade={lastTrade} />
+				<StatusCard
+					label="Bot Status"
+					value={status?.status ?? "unknown"}
+					detail={status?.lastHeartbeat ? `Last heartbeat ${status.lastHeartbeat}` : ""}
+				/>
 			</div>
 
 			<div className="mt-6">

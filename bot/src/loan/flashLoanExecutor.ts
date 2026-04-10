@@ -18,6 +18,14 @@ function requireSetting(value: string, label: string): string {
 	return value;
 }
 
+function requirePublicKey(value: string, label: string): PublicKey {
+	try {
+		return new PublicKey(requireSetting(value, label));
+	} catch {
+		throw new Error(`${label} is not a valid public key`);
+	}
+}
+
 function buildExecuteArbitrageInstruction(
 	minimumProfit: bigint,
 	repaymentAmount: bigint,
@@ -67,32 +75,37 @@ export async function executeFlashLoanArbitrage(
 		throw new Error(decision.reason ?? "No profitable opportunity");
 	}
 
-	const flashLoanProgramId = new PublicKey(
-		requireSetting(settings.flashLoanProgramId, "FLASH_LOAN_PROGRAM_ID")
+	const flashLoanProgramId = requirePublicKey(
+		settings.flashLoanProgramId,
+		"FLASH_LOAN_PROGRAM_ID"
 	);
-	const flashLoanReserve = new PublicKey(
-		requireSetting(settings.flashLoanReserveAccount, "FLASH_LOAN_RESERVE")
+	const flashLoanReserve = requirePublicKey(
+		settings.flashLoanReserveAccount,
+		"FLASH_LOAN_RESERVE"
 	);
-	const flashLoanLiquidity = new PublicKey(
-		requireSetting(settings.flashLoanLiquidityAccount, "FLASH_LOAN_LIQUIDITY")
+	const flashLoanLiquidity = requirePublicKey(
+		settings.flashLoanLiquidityAccount,
+		"FLASH_LOAN_LIQUIDITY"
 	);
-	const flashLoanFeeReceiver = new PublicKey(
-		requireSetting(settings.flashLoanFeeReceiverAccount, "FLASH_LOAN_FEE_RECEIVER")
+	const flashLoanFeeReceiver = requirePublicKey(
+		settings.flashLoanFeeReceiverAccount,
+		"FLASH_LOAN_FEE_RECEIVER"
 	);
-	const flashLoanHostFeeReceiver = new PublicKey(
-		requireSetting(
-			settings.flashLoanHostFeeReceiverAccount,
-			"FLASH_LOAN_HOST_FEE_RECEIVER"
-		)
+	const flashLoanHostFeeReceiver = requirePublicKey(
+		settings.flashLoanHostFeeReceiverAccount,
+		"FLASH_LOAN_HOST_FEE_RECEIVER"
 	);
-	const flashLoanMarket = new PublicKey(
-		requireSetting(settings.flashLoanLendingMarketAccount, "FLASH_LOAN_MARKET")
+	const flashLoanMarket = requirePublicKey(
+		settings.flashLoanLendingMarketAccount,
+		"FLASH_LOAN_MARKET"
 	);
-	const inputTokenAccount = new PublicKey(
-		requireSetting(settings.inputTokenAccount, "INPUT_TOKEN_ACCOUNT")
+	const inputTokenAccount = requirePublicKey(
+		settings.inputTokenAccount,
+		"INPUT_TOKEN_ACCOUNT"
 	);
-	const outputTokenAccount = new PublicKey(
-		requireSetting(settings.outputTokenAccount, "OUTPUT_TOKEN_ACCOUNT")
+	const outputTokenAccount = requirePublicKey(
+		settings.outputTokenAccount,
+		"OUTPUT_TOKEN_ACCOUNT"
 	);
 
 	const transaction = new Transaction();
