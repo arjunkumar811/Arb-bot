@@ -1,5 +1,5 @@
-# Solana Arbitrage Bot (Devnet)
 
+<<<<<<< HEAD
 Production-grade, clean-architecture Solana arbitrage bot with Jupiter swaps and flash-loan aware validation.
 
 ## Features
@@ -95,3 +95,5 @@ Swap success: 5f9s2x...abc
 // 1. dev net
 // 2. Token Account
 // 3. not only for usdt & usdc
+=======
+>>>>>>> 5f90bffc3349bb1cb1e2040f8c12ff17192aaf90
