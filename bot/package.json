@@ -8,6 +8,7 @@
 		"start": "node dist/main.js",
 		"dev": "ts-node src/main.ts",
 		"server": "ts-node src/server.ts",
+		"ws": "ts-node -P tsconfig.json ../server/wsServer.ts",
 		"setup": "ts-node scripts/setupWallet.ts"
 	},
 	"dependencies": {
@@ -15,6 +16,9 @@
 		"@solana/web3.js": "^1.98.0",
 		"cors": "^2.8.5",
 		"express": "^4.19.2",
+		"socket.io": "^4.8.3",
+		"socket.io-client": "^4.8.3",
+		"undici": "^6.24.1",
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {

@@ -2,6 +2,7 @@ import { settings } from "../config/settings";
 import { calculateBpsFee } from "../utils/math";
 import { validateProfit } from "../rules/profitValidator";
 import { ScanResult } from "./scanner";
+import { emitEvent } from "../server/wsClient";
 
 export type StrategyDecision = {
 	shouldExecute: boolean;
@@ -39,6 +40,22 @@ export function evaluateOpportunities(
 			flashLoanFee,
 			swapFee,
 			minimumProfitThreshold: settings.minProfitThreshold,
+		});
+
+		const startAmount = result.initialAmount;
+		const finalAmount = result.finalAmount;
+		const profit = validation.profit;
+		const percentage =
+			startAmount > 0n
+				? (Number(profit) / Number(startAmount)) * 100
+				: 0;
+
+		emitEvent("arb_update", {
+			startAmount: startAmount.toString(),
+			finalAmount: finalAmount.toString(),
+			profit: profit.toString(),
+			percentage,
+			profitable: validation.isProfitable,
 		});
 
 		if (validation.isProfitable && validation.profit > best.profit) {

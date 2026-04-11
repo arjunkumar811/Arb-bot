@@ -21,7 +21,7 @@ export function OpportunityTable({ rows }: OpportunityTableProps): JSX.Element {
 			</CardHeader>
 			<CardContent className="pt-0">
 				<div className="overflow-x-auto">
-				<table className="w-full text-left text-sm">
+					<table className="w-full text-left text-sm">
 					<thead className="text-xs uppercase tracking-wide text-slate-500">
 						<tr className="border-b border-slate-800">
 							<th className="py-3">Pair</th>
@@ -42,7 +42,7 @@ export function OpportunityTable({ rows }: OpportunityTableProps): JSX.Element {
 							</tr>
 						))}
 					</tbody>
-				</table>
+					</table>
 				</div>
 			</CardContent>
 		</Card>

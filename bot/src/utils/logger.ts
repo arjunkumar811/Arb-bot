@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { emitEvent } from "../server/wsClient";
 
 export type LogEntry = {
 	level: "success" | "failure" | "info";
@@ -28,6 +29,7 @@ function writeLog(entry: LogEntry): void {
 	ensureLogDir();
 	const line = JSON.stringify(entry);
 	fs.appendFileSync(LOG_FILE, `${line}\n`, "utf-8");
+	emitEvent("log_update", entry);
 }
 
 export function logSuccess(message: string, signature?: string, profit?: string): void {

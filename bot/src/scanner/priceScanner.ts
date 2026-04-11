@@ -1,5 +1,6 @@
 import { settings } from "../config/settings";
 import { fetchQuote, JupiterQuote } from "../dex/jupiterClient";
+import { emitEvent } from "../server/wsClient";
 
 export type PriceQuote = {
 	inputMint: string;
@@ -30,6 +31,15 @@ export async function getQuote(
 	const outAmount = BigInt(best.outAmount);
 	const price = Number(outAmount) / Number(inAmount || 1n);
 	const priceImpactPct = Number(best.priceImpactPct || 0);
+
+	emitEvent("quote_update", {
+		inputToken: best.inputMint,
+		outputToken: best.outputMint,
+		inputAmount: best.inAmount,
+		outputAmount: best.outAmount,
+		route: best.swapMode,
+		fee: best.otherAmountThreshold,
+	});
 
 	return {
 		inputMint: best.inputMint,

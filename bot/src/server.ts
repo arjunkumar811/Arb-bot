@@ -5,6 +5,7 @@ import http from "http";
 import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
 import { writeRuntimeSettings } from "./config/runtime";
+import { startBot, stopBot } from "./bot/bot";
 
 const PORT = Number(process.env.API_PORT ?? 3001);
 const LOG_FILE =
@@ -227,15 +228,24 @@ app.get("/api/trades", (_req, res) => {
 	res.json(buildTrades(entries));
 });
 
-app.post("/api/start", (_req, res) => {
+app.post("/api/start", async (_req, res) => {
 	status = { ...status, status: "running" };
 	broadcast({ type: "status", payload: buildStatus() });
+	try {
+		await startBot();
+	} catch (error) {
+		status = { ...status, status: "stopped" };
+		broadcast({ type: "status", payload: buildStatus() });
+		res.status(500).json({ ok: false, error: (error as Error).message });
+		return;
+	}
 	res.status(200).json({ ok: true });
 });
 
 app.post("/api/stop", (_req, res) => {
 	status = { ...status, status: "stopped" };
 	broadcast({ type: "status", payload: buildStatus() });
+	stopBot();
 	res.status(200).json({ ok: true });
 });
 

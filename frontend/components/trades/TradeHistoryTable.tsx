@@ -5,6 +5,7 @@ type TradeRow = {
 	route: string;
 	profit: string;
 	status: string;
+	signature: string;
 	time: string;
 };
 
@@ -25,9 +26,10 @@ export function TradeHistoryTable({ rows }: TradeHistoryTableProps): JSX.Element
 					<thead className="text-xs uppercase tracking-wide text-slate-500">
 						<tr className="border-b border-slate-800">
 							<th className="py-3">Trade ID</th>
-							<th className="py-3">Route</th>
+							<th className="py-3">Steps</th>
 							<th className="py-3">Profit</th>
 							<th className="py-3">Status</th>
+							<th className="py-3">Signature</th>
 							<th className="py-3">Time</th>
 						</tr>
 					</thead>
@@ -38,6 +40,9 @@ export function TradeHistoryTable({ rows }: TradeHistoryTableProps): JSX.Element
 								<td className="py-3">{row.route}</td>
 								<td className="py-3 text-emerald-300">{row.profit}</td>
 								<td className="py-3 text-slate-400">{row.status}</td>
+								<td className="py-3 text-slate-400">
+									{row.signature}
+								</td>
 								<td className="py-3 text-slate-400">{row.time}</td>
 							</tr>
 						))}

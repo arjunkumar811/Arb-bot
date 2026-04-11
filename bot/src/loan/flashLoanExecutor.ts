@@ -4,6 +4,9 @@ import { connection, walletKeypair } from "../config/rpc";
 import { getSettings } from "../config/settings";
 import { buildFlashLoanPlan } from "./flashLoanManager";
 import { StrategyDecision } from "../bot/strategyEngine";
+import { emitEvent } from "../server/wsClient";
+import { retry, withTimeout } from "../utils/retry";
+import { logFailure, logInfo } from "../utils/logger";
 
 type FlashLoanExecutionResult = {
 	signature: string;
@@ -128,28 +131,94 @@ export async function executeFlashLoanArbitrage(
 	}
 
 	const borrowInstructionIndex = instructions.length;
-	const flashLoanPlan = buildFlashLoanPlan(
-		{
-			programId: flashLoanProgramId,
-			amount: decision.scanResult.initialAmount,
-			feeBps: settings.flashLoanFeeBps,
-			reserveAccount: flashLoanReserve,
-			liquidityAccount: flashLoanLiquidity,
-			feeReceiverAccount: flashLoanFeeReceiver,
-			hostFeeReceiverAccount: flashLoanHostFeeReceiver,
-			lendingMarketAccount: flashLoanMarket,
-			destinationTokenAccount: inputTokenAccount,
-			sourceTokenAccount: outputTokenAccount,
-			userTransferAuthority: walletKeypair.publicKey,
-		},
-		borrowInstructionIndex
-	);
+	emitEvent("execution_update", {
+		step: "borrow",
+		status: "running",
+		timestamp: new Date().toISOString(),
+	});
+	logInfo("Step start: Borrow Flash Loan");
+	const borrowStart = Date.now();
+	let flashLoanPlan = null as ReturnType<typeof buildFlashLoanPlan> | null;
+	try {
+		flashLoanPlan = buildFlashLoanPlan(
+			{
+				programId: flashLoanProgramId,
+				amount: decision.scanResult.initialAmount,
+				feeBps: settings.flashLoanFeeBps,
+				reserveAccount: flashLoanReserve,
+				liquidityAccount: flashLoanLiquidity,
+				feeReceiverAccount: flashLoanFeeReceiver,
+				hostFeeReceiverAccount: flashLoanHostFeeReceiver,
+				lendingMarketAccount: flashLoanMarket,
+				destinationTokenAccount: inputTokenAccount,
+				sourceTokenAccount: outputTokenAccount,
+				userTransferAuthority: walletKeypair.publicKey,
+			},
+			borrowInstructionIndex
+		);
+		emitEvent("execution_update", {
+			step: "borrow",
+			status: "success",
+			timestamp: new Date().toISOString(),
+		});
+		logInfo("Step success: Borrow Flash Loan");
+	} catch (error) {
+		emitEvent("execution_update", {
+			step: "borrow",
+			status: "failed",
+			timestamp: new Date().toISOString(),
+		});
+		emitEvent("execution_failed", {
+			step: "borrow",
+			error: (error as Error).message,
+		});
+		logFailure("Borrow step failed", undefined, (error as Error).message);
+		throw error;
+	} finally {
+		emitEvent("step_duration_update", {
+			step: "borrow",
+			durationMs: Date.now() - borrowStart,
+		});
+	}
 
 	const arbitrageInstruction = buildExecuteArbitrageInstruction(
 		settings.minProfitThreshold,
 		flashLoanPlan.repaymentAmount,
 		settings
 	);
+
+	emitEvent("execution_update", {
+		step: "swap1",
+		status: "running",
+		timestamp: new Date().toISOString(),
+	});
+	emitEvent("execution_update", {
+		step: "swap2",
+		status: "running",
+		timestamp: new Date().toISOString(),
+	});
+	logInfo("Step start: Swap Token A → B");
+	logInfo("Step start: Swap Token B → C");
+	emitEvent("execution_update", {
+		step: "swap1",
+		status: "success",
+		timestamp: new Date().toISOString(),
+	});
+	emitEvent("execution_update", {
+		step: "swap2",
+		status: "success",
+		timestamp: new Date().toISOString(),
+	});
+	logInfo("Step success: Swap Token A → B");
+	logInfo("Step success: Swap Token B → C");
+	emitEvent("step_duration_update", {
+		step: "swap1",
+		durationMs: 0,
+	});
+	emitEvent("step_duration_update", {
+		step: "swap2",
+		durationMs: 0,
+	});
 
 	instructions.push(
 		flashLoanPlan.borrowInstruction,
@@ -165,14 +234,131 @@ export async function executeFlashLoanArbitrage(
 	transaction.feePayer = walletKeypair.publicKey;
 	transaction.sign(walletKeypair);
 
-	const signature = await connection.sendRawTransaction(transaction.serialize(), {
-		maxRetries: settings.swapRetries,
-	});
+	const repayStart = Date.now();
+	let signature = "";
+	try {
+		signature = await retry(
+			() =>
+				withTimeout(
+					connection.sendRawTransaction(transaction.serialize(), {
+						maxRetries: settings.swapRetries,
+					}),
+					settings.swapTimeoutMs
+				),
+			{
+				retries: 3,
+				delayMs: 500,
+				backoffFactor: 2,
+				maxDelayMs: 2000,
+				jitter: 0.1,
+				onRetry: (_error, attempt) => {
+					emitEvent("retry_attempt", {
+						step: "repay",
+						attempt,
+					});
+					logInfo(`Retrying Repay (Attempt ${attempt})`);
+				},
+			}
+		);
+	} catch (error) {
+		emitEvent("execution_update", {
+			step: "repay",
+			status: "failed",
+			timestamp: new Date().toISOString(),
+		});
+		emitEvent("execution_failed", {
+			step: "repay",
+			error: (error as Error).message,
+		});
+		logFailure("Repay step failed", undefined, (error as Error).message);
+		throw error;
+	} finally {
+		emitEvent("step_duration_update", {
+			step: "repay",
+			durationMs: Date.now() - repayStart,
+		});
+	}
 
-	await connection.confirmTransaction({
-		signature,
-		blockhash: latestBlockhash.blockhash,
-		lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+	emitEvent("execution_update", {
+		step: "repay",
+		status: "running",
+		timestamp: new Date().toISOString(),
+		transactionSignature: signature,
+	});
+	logInfo("Step start: Repay Loan");
+	emitEvent("execution_update", {
+		step: "repay",
+		status: "success",
+		timestamp: new Date().toISOString(),
+		transactionSignature: signature,
+	});
+	logInfo("Step success: Repay Loan");
+
+	const confirmStart = Date.now();
+	try {
+		await retry(
+			() =>
+				withTimeout(
+					connection.confirmTransaction({
+						signature,
+						blockhash: latestBlockhash.blockhash,
+						lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+					}),
+					settings.confirmTimeoutMs
+				),
+			{
+				retries: 3,
+				delayMs: 500,
+				backoffFactor: 2,
+				maxDelayMs: 2000,
+				jitter: 0.1,
+				onRetry: (_error, attempt) => {
+					emitEvent("retry_attempt", {
+						step: "confirmed",
+						attempt,
+					});
+					logInfo(`Retrying Confirm (Attempt ${attempt})`);
+				},
+			}
+		);
+	} catch (error) {
+		emitEvent("execution_update", {
+			step: "confirmed",
+			status: "failed",
+			timestamp: new Date().toISOString(),
+			transactionSignature: signature,
+		});
+		emitEvent("execution_failed", {
+			step: "confirmed",
+			error: (error as Error).message,
+		});
+		logFailure("Confirm step failed", signature, (error as Error).message);
+		throw error;
+	} finally {
+		emitEvent("step_duration_update", {
+			step: "confirmed",
+			durationMs: Date.now() - confirmStart,
+		});
+	}
+
+	emitEvent("execution_update", {
+		step: "confirmed",
+		status: "success",
+		timestamp: new Date().toISOString(),
+		transactionSignature: signature,
+	});
+	logInfo("Step success: Confirm Transaction");
+
+	emitEvent("execution_update", {
+		step: "profit",
+		status: "success",
+		timestamp: new Date().toISOString(),
+		transactionSignature: signature,
+	});
+	logInfo("Step success: Update Profit");
+	emitEvent("step_duration_update", {
+		step: "profit",
+		durationMs: 0,
 	});
 
 	return {

@@ -3,6 +3,9 @@ import { settings } from "../config/settings";
 import { logFailure, logInfo, logProfit } from "../utils/logger";
 import { evaluateArbitrage } from "./arbitrageEngine";
 import { executePipeline } from "./executionManager";
+import { emitWalletUpdate } from "../wallet/walletTracker";
+import { emitEvent } from "../server/wsClient";
+import { startRpcMonitor, stopRpcMonitor } from "../monitor/rpcHealth";
 
 type ScanPair = {
 	baseMint: string;
@@ -12,12 +15,42 @@ type ScanPair = {
 
 let running = false;
 let loopPromise: Promise<void> | null = null;
+let executionQueue: number = 0;
+let executing = false;
+let stopRequested = false;
+let delayTimer: NodeJS.Timeout | null = null;
+let delayResolve: (() => void) | null = null;
 
-function delay(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+function emitExecutionState(): void {
+	emitEvent("execution_state", { executing });
 }
 
-async function runLoop(): Promise<void> {
+function emitQueueUpdate(): void {
+	emitEvent("execution_queue_update", { queueSize: executionQueue });
+}
+
+function interruptibleDelay(ms: number): Promise<void> {
+	if (!ms || ms <= 0) return Promise.resolve();
+	return new Promise((resolve) => {
+		delayResolve = () => {
+			delayResolve = null;
+			delayTimer = null;
+			resolve();
+		};
+		delayTimer = setTimeout(() => {
+			delayResolve?.();
+		}, ms);
+	});
+}
+
+function cancelDelay(): void {
+	if (!delayTimer) return;
+	clearTimeout(delayTimer);
+	delayTimer = null;
+	delayResolve?.();
+}
+
+async function runCycle(): Promise<void> {
 	const pairs: ScanPair[] = [
 		{
 			baseMint: TOKENS.USDC.mint,
@@ -26,44 +59,73 @@ async function runLoop(): Promise<void> {
 		},
 	];
 
+	await emitWalletUpdate();
+	logInfo("Scanning for opportunities");
+	const results = await Promise.all(
+		pairs.map((pair) =>
+			evaluateArbitrage(pair.baseMint, pair.quoteMint, pair.amount)
+		)
+	);
+
+	const best = results
+		.filter((result) => result.isProfitable)
+		.sort((a, b) => Number(b.profit - a.profit))[0];
+
+	if (!best) {
+		logInfo("No profitable opportunity");
+		return;
+	}
+
+	logProfit(best.profit, "Arbitrage opportunity detected");
+	await executePipeline({
+		shouldExecute: true,
+		reason: undefined,
+		profit: best.profit,
+		flashLoanFee: 0n,
+		swapFee: 0n,
+		scanResult: {
+			forward: best.forward,
+			backward: best.backward,
+			initialAmount: best.initialAmount,
+			finalAmount: best.finalAmount,
+		},
+	});
+}
+
+async function runLoop(): Promise<void> {
 	while (running) {
+		let processedQueue = false;
 		try {
-			logInfo("Scanning for opportunities");
-			const results = await Promise.all(
-				pairs.map((pair) =>
-					evaluateArbitrage(pair.baseMint, pair.quoteMint, pair.amount)
-				)
-			);
-
-			const best = results
-				.filter((result) => result.isProfitable)
-				.sort((a, b) => Number(b.profit - a.profit))[0];
-
-			if (!best) {
-				logInfo("No profitable opportunity");
-				await delay(settings.loopDelayMs);
-				continue;
+			executing = true;
+			emitExecutionState();
+			await runCycle();
+			while (executionQueue > 0) {
+				executionQueue -= 1;
+				emitQueueUpdate();
+				processedQueue = true;
+				await runCycle();
 			}
-
-			logProfit(best.profit, "Arbitrage opportunity detected");
-			await executePipeline({
-				shouldExecute: true,
-				reason: undefined,
-				profit: best.profit,
-				flashLoanFee: 0n,
-				swapFee: 0n,
-				scanResult: {
-					forward: best.forward,
-					backward: best.backward,
-					initialAmount: best.initialAmount,
-					finalAmount: best.finalAmount,
-				},
-			});
 		} catch (error) {
 			logFailure("Loop error", undefined, (error as Error).message);
+		} finally {
+			executing = false;
+			emitExecutionState();
 		}
 
-		await delay(settings.loopDelayMs);
+		if (processedQueue) {
+			continue;
+		}
+
+		await interruptibleDelay(settings.loopDelayMs);
+	}
+
+	if (stopRequested) {
+		logInfo("Bot Stopped Safely");
+		emitEvent("log_update", {
+			message: "Bot Stopped Safely",
+			timestamp: new Date().toISOString(),
+		});
+		stopRequested = false;
 	}
 }
 
@@ -71,11 +133,45 @@ async function runLoop(): Promise<void> {
 export function startBot(): Promise<void> {
 	if (running) return loopPromise ?? Promise.resolve();
 	running = true;
+	stopRequested = false;
+	startRpcMonitor();
 	loopPromise = runLoop();
 	return loopPromise;
 }
 
 // Stop the bot loop at the next delay boundary.
 export function stopBot(): void {
+	stopRequested = true;
 	running = false;
+	cancelDelay();
+	stopRpcMonitor();
+}
+
+export function isBotRunning(): boolean {
+	return running;
+}
+
+async function runQueuedExecutions(): Promise<void> {
+	if (executing) return;
+	executing = true;
+	emitExecutionState();
+	try {
+		while (executionQueue > 0) {
+			executionQueue -= 1;
+			emitQueueUpdate();
+			await runCycle();
+		}
+	} catch (error) {
+		logFailure("Queued execution error", undefined, (error as Error).message);
+	} finally {
+		executing = false;
+		emitExecutionState();
+	}
+}
+
+export async function runSingleExecution(): Promise<void> {
+	executionQueue += 1;
+	emitQueueUpdate();
+	cancelDelay();
+	await runQueuedExecutions();
 }
