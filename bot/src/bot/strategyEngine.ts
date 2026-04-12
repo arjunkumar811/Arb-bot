@@ -1,4 +1,4 @@
-import { settings } from "../config/settings";
+import { getSettings } from "../config/settings";
 import { calculateBpsFee } from "../utils/math";
 import { validateProfit } from "../rules/profitValidator";
 import { ScanResult } from "./scanner";
@@ -16,6 +16,7 @@ export type StrategyDecision = {
 export function evaluateOpportunities(
 	results: ScanResult[]
 ): StrategyDecision {
+	const settings = getSettings();
 	let best: StrategyDecision = {
 		shouldExecute: false,
 		reason: "No opportunities",

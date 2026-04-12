@@ -30,6 +30,10 @@ if (proxyUrl) {
 
 const mockOnFailure =
 	process.env.MOCK_QUOTES_ON_FAILURE?.toLowerCase() !== "false";
+const forceMockQuotes =
+	process.env.FORCE_MOCK_QUOTES?.toLowerCase() === "true";
+const useMockQuotes =
+	process.env.USE_MOCK_QUOTES?.toLowerCase() === "true";
 
 function debugLog(message: string): void {
 	console.log(message);
@@ -50,7 +54,9 @@ function buildMockQuote(
 	outputMint: string,
 	amount: bigint
 ): JupiterQuote {
-	const outAmount = amount - amount / 200n; // -0.5% to avoid false profits
+	const jitterBps = 30n + BigInt(Math.floor(Math.random() * 40));
+	const fee = (amount * jitterBps) / 10000n;
+	const outAmount = amount - fee; // small loss for realistic demo
 	return {
 		inputMint,
 		outputMint,
@@ -111,6 +117,17 @@ export async function fetchQuote(
 	timeoutMs = settings.quoteTimeoutMs
 ): Promise<JupiterQuote> {
 	validateQuoteInputs(inputMint, outputMint, amount, slippageBps);
+	if (useMockQuotes) {
+		logInfo("Using mock quotes (devnet mode)");
+		return buildMockQuote(inputMint, outputMint, amount);
+	}
+	if (forceMockQuotes) {
+		logInfo("Force mock quotes enabled; skipping Jupiter request");
+		return buildMockQuote(inputMint, outputMint, amount);
+	}
+	if ((process.env.RPC_URL ?? "").toLowerCase().includes("devnet")) {
+		throw new Error("Jupiter live quotes not supported on devnet");
+	}
 	const params = new URLSearchParams({
 		inputMint,
 		outputMint,

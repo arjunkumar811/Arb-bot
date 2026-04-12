@@ -82,7 +82,11 @@ async function ensureAssociatedTokenAccount(
 	return ata;
 }
 
-export function WalletStatus(): JSX.Element {
+type WalletStatusProps = {
+	compact?: boolean;
+};
+
+export function WalletStatus({ compact }: WalletStatusProps): JSX.Element {
 	const { connection } = useConnection();
 	const { publicKey, connected, sendTransaction } = useWallet();
 	const [balance, setBalance] = useState<number | null>(null);
@@ -199,34 +203,38 @@ export function WalletStatus(): JSX.Element {
 	return (
 		<div className="flex flex-col items-end gap-2">
 			<div className="flex items-center gap-3">
-				<WalletMultiButton className="!rounded-lg !bg-slate-800 !text-xs !text-slate-100 hover:!bg-slate-700" />
-				<div className="rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-200">
+				<WalletMultiButton className="!rounded-xl !bg-slate-800/90 !text-xs !text-slate-100 hover:!bg-slate-700" />
+				<div className="rounded-xl border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-xs text-slate-200 shadow-sm">
 					{balance === null ? "-- SOL" : `${balance.toFixed(3)} SOL`}
 				</div>
 			</div>
-			<div className="w-full min-w-[280px] rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-xs text-slate-300">
-				<div className="flex items-center justify-between gap-3">
-					<span className="text-slate-500">Wallet</span>
-					<span className="break-all text-right text-slate-200">
-						{walletInfo?.address ?? "Not connected"}
-					</span>
+			{compact ? null : (
+				<div className="w-full min-w-[280px] rounded-xl border border-slate-700/70 bg-slate-900/70 px-4 py-3 text-xs text-slate-300 shadow-sm">
+					<div className="flex items-center justify-between gap-3">
+						<span className="text-slate-500">Wallet</span>
+						<span className="break-all text-right text-slate-200">
+							{walletInfo?.address ?? "Not connected"}
+						</span>
+					</div>
+					<div className="mt-2 flex items-center justify-between gap-3">
+						<span className="text-slate-500">USDC ATA</span>
+						<span className="break-all text-right text-slate-200">
+							{walletInfo?.usdcAccount ?? "--"}
+						</span>
+					</div>
+					{loading ? (
+						<div className="mt-3 text-xs text-slate-400">
+							Initializing…
+						</div>
+					) : null}
+					{warning ? (
+						<div className="mt-2 text-xs text-amber-400">{warning}</div>
+					) : null}
+					{error ? (
+						<div className="mt-2 text-xs text-rose-400">{error}</div>
+					) : null}
 				</div>
-				<div className="mt-2 flex items-center justify-between gap-3">
-					<span className="text-slate-500">USDC ATA</span>
-					<span className="break-all text-right text-slate-200">
-						{walletInfo?.usdcAccount ?? "--"}
-					</span>
-				</div>
-				{loading ? (
-					<div className="mt-3 text-xs text-slate-400">Initializing…</div>
-				) : null}
-				{warning ? (
-					<div className="mt-2 text-xs text-amber-400">{warning}</div>
-				) : null}
-				{error ? (
-					<div className="mt-2 text-xs text-rose-400">{error}</div>
-				) : null}
-			</div>
+			)}
 		</div>
 	);
 }

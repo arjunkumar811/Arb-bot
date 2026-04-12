@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-	CartesianGrid,
-	Line,
-	LineChart,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "../../components/layout";
-import { DashboardCard } from "../../components/dashboard/DashboardCard";
+import { LogsConsole } from "../../components/dashboard/LogsConsole";
+import { ProfitChart } from "../../components/dashboard/ProfitChart";
+import { StatusBadge } from "../../components/dashboard/StatusBadge";
+import { StatsCard } from "../../components/dashboard/StatsCard";
+import { WalletCard } from "../../components/dashboard/WalletCard";
 import { ExecutionStep, StepStatus } from "../../components/ExecutionStep";
 import { getSocket } from "../../lib/socket";
 
@@ -124,7 +119,6 @@ export default function DashboardPage(): JSX.Element {
 	const [wallet, setWallet] = useState<WalletUpdate | null>(null);
 	const [quote, setQuote] = useState<QuoteUpdate | null>(null);
 	const [arb, setArb] = useState<ArbUpdate | null>(null);
-	const [execution, setExecution] = useState<ExecutionUpdate | null>(null);
 	const [logs, setLogs] = useState<LogUpdate[]>([]);
 	const [stepState, setStepState] = useState<Record<string, ExecutionUpdate>>(
 		{}
@@ -142,7 +136,6 @@ export default function DashboardPage(): JSX.Element {
 		useState<ProfitValidationFailed | null>(null);
 	const [queueSize, setQueueSize] = useState(0);
 	const [executing, setExecuting] = useState(false);
-	const [executionLatency, setExecutionLatency] = useState<number | null>(null);
 	const [profitStats, setProfitStats] = useState<ProfitStats>({
 		totalTrades: 0,
 		successfulTrades: 0,
@@ -151,9 +144,6 @@ export default function DashboardPage(): JSX.Element {
 		history: [],
 	});
 	const [simulation, setSimulation] = useState(false);
-	const logRef = useRef<HTMLDivElement | null>(null);
-	const logEndRef = useRef<HTMLDivElement | null>(null);
-	const autoScrollRef = useRef(true);
 
 	useEffect(() => {
 		const socket = getSocket();
@@ -165,7 +155,6 @@ export default function DashboardPage(): JSX.Element {
 			if (payload.step === "fetch_quotes" && payload.status === "running") {
 				setFailedStep(null);
 			}
-			setExecution(payload);
 			setStepState((prev) => ({
 				...prev,
 				[payload.step]: payload,
@@ -213,8 +202,8 @@ export default function DashboardPage(): JSX.Element {
 		socket.on("execution_state", (payload: ExecutionStateUpdate) => {
 			setExecuting(payload.executing);
 		});
-		socket.on("execution_latency_update", (payload: ExecutionLatencyUpdate) => {
-			setExecutionLatency(payload.totalExecutionTime);
+		socket.on("execution_latency_update", (_payload: ExecutionLatencyUpdate) => {
+			// Intentionally ignored in the new layout.
 		});
 		socket.on("log_update", (payload: LogUpdate) => {
 			setLogs((prev) => [...prev.slice(-200), payload]);
@@ -253,15 +242,6 @@ export default function DashboardPage(): JSX.Element {
 		};
 	}, []);
 
-	useEffect(() => {
-		if (!autoScrollRef.current) return;
-		const container = logRef.current;
-		if (!container) return;
-		requestAnimationFrame(() => {
-			container.scrollTop = container.scrollHeight;
-		});
-	}, [logs]);
-
 	const stats = useMemo(() => {
 		return {
 			totalTrades: profitStats.totalTrades,
@@ -271,16 +251,26 @@ export default function DashboardPage(): JSX.Element {
 		};
 	}, [profitStats]);
 
+	const botStatus = useMemo<
+		"running" | "stopped" | "simulation" | "error"
+	>(() => {
+		if (failedStep) return "error";
+		if (simulation) return "simulation";
+		if (executing) return "running";
+		return "stopped";
+	}, [executing, failedStep, simulation]);
+
 	return (
 		<DashboardLayout
 			title="Dashboard"
 			subtitle="Real-time Solana flash loan activity"
+			botStatus={botStatus}
 		>
 			<div className="space-y-6">
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div>
-						<h2 className="text-lg font-semibold">Arbitrage Dashboard</h2>
-						<p className="text-xs text-slate-400">
+						<h2 className="text-2xl font-semibold text-white">Arbitrage Dashboard</h2>
+						<p className="text-sm text-slate-400">
 							Streaming wallet, quote, and execution events
 						</p>
 					</div>
@@ -290,7 +280,7 @@ export default function DashboardPage(): JSX.Element {
 								const socket = getSocket();
 								socket.emit("start_bot");
 							}}
-							className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200"
+							className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-500"
 						>
 							Start Scanner
 						</button>
@@ -299,7 +289,7 @@ export default function DashboardPage(): JSX.Element {
 								const socket = getSocket();
 								socket.emit("execute_single");
 							}}
-							className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200"
+							className="rounded-xl border border-slate-700/80 bg-slate-900/70 px-4 py-2 text-xs font-semibold text-slate-100 transition-all duration-200 hover:bg-slate-800"
 						>
 							Execute Single Trade
 						</button>
@@ -308,7 +298,7 @@ export default function DashboardPage(): JSX.Element {
 								const socket = getSocket();
 								socket.emit("stop_bot");
 							}}
-							className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200"
+							className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-rose-500/20 transition-all duration-200 hover:bg-rose-500"
 						>
 							Stop Bot
 						</button>
@@ -317,195 +307,156 @@ export default function DashboardPage(): JSX.Element {
 								const socket = getSocket();
 								socket.emit("simulation_toggle", { enabled: !simulation });
 							}}
-							className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200"
+							className="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-200 transition-all duration-200 hover:bg-amber-500/20"
 						>
 							Simulation: {simulation ? "ON" : "OFF"}
 						</button>
 					</div>
 				</div>
 
-				<div className="grid gap-6 lg:grid-cols-3">
-					<DashboardCard title="Wallet Status" subtitle="Balances">
-						<div className="space-y-2 text-sm">
-							<p>SOL: {wallet?.solBalance?.toFixed(3) ?? "--"}</p>
-							<p>USDC: {wallet?.usdcBalance ?? "--"}</p>
-							<p>USDT: {wallet?.usdtBalance ?? "--"}</p>
-						</div>
-					</DashboardCard>
-					<DashboardCard title="Live Quotes" subtitle="Jupiter route">
-						<div className="space-y-2 text-sm">
-							<p>
-								{quote?.inputToken ?? "--"} → {quote?.outputToken ?? "--"}
-							</p>
-							<p>Input: {quote?.inputAmount ?? "--"}</p>
-							<p>Output: {quote?.outputAmount ?? "--"}</p>
-							<p>Route: {quote?.route ?? "--"}</p>
-						</div>
-					</DashboardCard>
-					<DashboardCard title="Arbitrage Scanner" subtitle="Opportunity">
-						<div className="space-y-2 text-sm">
-							<p>Profit: {arb?.profit ?? "--"}</p>
-							<p>Profitable: {arb?.profitable ? "Yes" : "No"}</p>
-							<p>Percent: {arb?.percentage?.toFixed(2) ?? "--"}%</p>
-						</div>
-					</DashboardCard>
-				</div>
-
-				<div className="grid gap-6 lg:grid-cols-2">
-					<DashboardCard title="System Health" subtitle="RPC Monitor">
-						<div className="space-y-2 text-sm">
-							<p>Status: {rpcHealth?.status ?? "--"}</p>
-							<p>Latency: {rpcHealth?.latencyMs ?? "--"}ms</p>
-							<p>Block Height: {rpcHealth?.blockHeight ?? "--"}</p>
-						</div>
-					</DashboardCard>
-					<DashboardCard title="Profit Validation" subtitle="Execution checks">
-						<div className="space-y-2 text-sm">
-							<p>Expected Profit: {profitValidation?.expectedProfit ?? "--"}</p>
-							<p>Actual Profit: {profitValidation?.actualProfit ?? "--"}</p>
-							<p>Fees: {profitValidation?.fees ?? "--"}</p>
-							<p>Net Profit: {profitValidation?.netProfit ?? "--"}</p>
-							{profitValidationFailed ? (
-								<p className="text-rose-400">
-									Validation Failed
-								</p>
-							) : null}
-						</div>
-					</DashboardCard>
-				</div>
-
-				<div className="grid gap-6 lg:grid-cols-3">
-					<DashboardCard title="Execution Status" subtitle="Flash loan flow">
-						<div className="space-y-3">
-							<div className="flex flex-wrap items-center justify-between text-xs text-slate-400">
-								<span>Queue: {queueSize} pending</span>
-								<span>{executing ? "Executing" : "Idle"}</span>
-								<span>
-									Total: {executionLatency ?? "--"}ms
+				<div className="grid grid-cols-12 gap-4">
+					<div className="col-span-12 space-y-4 lg:col-span-3">
+						<WalletCard
+							address={wallet?.solBalance !== undefined ? "Wallet connected" : null}
+							solBalance={wallet?.solBalance ?? null}
+							usdcBalance={wallet?.usdcBalance ?? null}
+							statusLabel={executing ? "Scanning in progress" : "Idle"}
+						/>
+						<div className="rounded-xl border border-slate-700/80 bg-slate-800/70 p-4 shadow-md">
+							<p className="text-xs uppercase tracking-widest text-slate-400">Bot Status</p>
+							<div className="mt-3 flex items-center justify-between">
+								<StatusBadge
+									status={botStatus}
+									label={
+										botStatus === "running"
+											? "Running"
+											: botStatus === "simulation"
+											? "Simulation"
+											: botStatus === "error"
+											? "Error"
+											: "Stopped"
+									}
+								/>
+								<span className="text-xs text-slate-400">
+									Queue: {queueSize}
 								</span>
 							</div>
-							{failedStep ? (
-								<div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-2 text-xs text-rose-300">
-									<p>Failed Step: {failedStep.step}</p>
-									<p className="truncate">{failedStep.error}</p>
-									<button
-										onClick={() => {
-											const socket = getSocket();
-											socket.emit("execute_single");
+							<div className="mt-4 space-y-2 text-sm text-slate-200">
+								<p>Latency: {rpcHealth?.latencyMs ?? "--"}ms</p>
+								<p>Block Height: {rpcHealth?.blockHeight ?? "--"}</p>
+							</div>
+						</div>
+						<div className="rounded-xl border border-slate-700/80 bg-slate-800/70 p-4 shadow-md">
+							<p className="text-xs uppercase tracking-widest text-slate-400">Live Quotes</p>
+							<div className="mt-3 space-y-2 text-sm text-slate-200">
+								<p>
+									{quote?.inputToken ?? "--"} → {quote?.outputToken ?? "--"}
+								</p>
+								<p>Input: {quote?.inputAmount ?? "--"}</p>
+								<p>Output: {quote?.outputAmount ?? "--"}</p>
+								<p className="text-xs text-slate-400">
+									Route: {quote?.route ?? "--"}
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<div className="col-span-12 space-y-4 lg:col-span-6">
+						<ProfitChart data={profitStats.history} />
+						<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+							<StatsCard
+								label="Total Trades"
+								value={stats.totalTrades.toString()}
+								hint={stats.totalTrades === 0 ? "Waiting for trades..." : undefined}
+							/>
+							<StatsCard
+								label="Total Profit"
+								value={stats.totalProfit.toFixed(0)}
+								hint="Net PnL"
+							/>
+							<StatsCard
+								label="Successful"
+								value={stats.successfulTrades.toString()}
+								hint="Profitable trades"
+							/>
+							<StatsCard
+								label="Failed"
+								value={stats.failedTrades.toString()}
+								hint="Unprofitable trades"
+							/>
+						</div>
+						<div className="rounded-xl border border-slate-700/80 bg-slate-800/70 p-4 shadow-md">
+							<p className="text-xs uppercase tracking-widest text-slate-400">Execution Flow</p>
+							<div className="mt-4 space-y-2">
+								{failedStep ? (
+									<div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-2 text-xs text-rose-300">
+										<p>Failed Step: {failedStep.step}</p>
+										<p className="truncate">{failedStep.error}</p>
+									</div>
+								) : null}
+								<div className="h-2 w-full rounded-full bg-slate-900">
+									<div
+										className="h-2 rounded-full bg-emerald-500"
+										style={{
+											width: `${
+												(Math.min(
+													Object.values(stepState).filter(
+														(step) => step.status === "success"
+													).length,
+													8
+												) /
+													8) * 100
+										}%`,
 										}}
-										className="mt-2 rounded border border-rose-400/60 px-2 py-1 text-[11px] font-semibold text-rose-200"
-									>
-										Retry
-									</button>
+									/>
 								</div>
-							) : null}
-							<div className="h-2 w-full rounded-full bg-slate-800">
-								<div
-									className="h-2 rounded-full bg-emerald-500"
-									style={{
-										width: `${
-											(Math.min(
-												Object.values(stepState).filter(
-													(step) => step.status === "success"
-												).length,
-												8
-											) /
-												8) * 100
-									}%`,
-									}}
-								/>
-							</div>
-							<div className="space-y-2">
-								{[
-									{ key: "fetch_quotes", title: "Fetch Quotes" },
-									{ key: "detect_arb", title: "Detect Arbitrage" },
-									{ key: "borrow", title: "Borrow Flash Loan" },
-									{ key: "swap1", title: "Swap Token A → B" },
-									{ key: "swap2", title: "Swap Token B → C" },
-									{ key: "repay", title: "Repay Loan" },
-									{ key: "confirmed", title: "Confirm Transaction" },
-									{ key: "profit", title: "Update Profit" },
-								].map((step, index) => (
-									<ExecutionStep
-										key={step.key}
-										index={index + 1}
-										title={step.title}
-										status={
-											stepState[step.key]?.status ?? "pending"
-										}
-										timestamp={stepState[step.key]?.timestamp}
-										signature={stepState[step.key]?.transactionSignature}
-										durationMs={stepDurations[step.key]}
-									/>
-								))}
+								<div className="mt-4 space-y-2">
+									{[
+										{ key: "fetch_quotes", title: "Fetch Quotes" },
+										{ key: "detect_arb", title: "Detect Arbitrage" },
+										{ key: "borrow", title: "Borrow Flash Loan" },
+										{ key: "swap1", title: "Swap Token A → B" },
+										{ key: "swap2", title: "Swap Token B → C" },
+										{ key: "repay", title: "Repay Loan" },
+										{ key: "confirmed", title: "Confirm Transaction" },
+									].map((step, index) => (
+										<ExecutionStep
+											key={step.key}
+											index={index + 1}
+											title={step.title}
+											status={
+												stepState[step.key]?.status ?? "pending"
+											}
+											timestamp={stepState[step.key]?.timestamp}
+											signature={stepState[step.key]?.transactionSignature}
+											durationMs={stepDurations[step.key]}
+										/>
+									))}
+								</div>
 							</div>
 						</div>
-					</DashboardCard>
-					<DashboardCard title="Profit Analytics" subtitle="Last 50 trades">
-						<div className="h-48">
-							<ResponsiveContainer width="100%" height="100%">
-								<LineChart data={profitStats.history}>
-									<CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
-									<XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
-									<YAxis stroke="#94a3b8" fontSize={10} />
-									<Tooltip
-										contentStyle={{
-											backgroundColor: "#0f172a",
-											border: "1px solid #1e293b",
-											color: "#e2e8f0",
-										}}
-									/>
-									<Line
-										type="monotone"
-										dataKey="profit"
-										stroke="#22c55e"
-										strokeWidth={2}
-										dot={false}
-									/>
-								</LineChart>
-							</ResponsiveContainer>
+					</div>
+
+					<div className="col-span-12 space-y-4 lg:col-span-3">
+						<div className="rounded-xl border border-slate-700/80 bg-slate-800/70 p-4 shadow-md">
+							<p className="text-xs uppercase tracking-widest text-slate-400">Performance</p>
+							<div className="mt-3 space-y-2 text-sm text-slate-200">
+								<p>Expected Profit: {profitValidation?.expectedProfit ?? "--"}</p>
+								<p>Actual Profit: {profitValidation?.actualProfit ?? "--"}</p>
+								<p>Fees: {profitValidation?.fees ?? "--"}</p>
+								<p>Net Profit: {profitValidation?.netProfit ?? "--"}</p>
+								{profitValidationFailed ? (
+									<p className="text-xs text-rose-400">Validation Failed</p>
+								) : null}
+							</div>
 						</div>
-						<div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-400">
-							<p>Total Trades: {stats.totalTrades}</p>
-							<p>Successful: {stats.successfulTrades}</p>
-							<p>Failed: {stats.failedTrades}</p>
-							<p>Total Profit: {stats.totalProfit.toFixed(0)}</p>
-							<p>Daily Profit: {profitStats.dailyProfit?.toFixed(0) ?? "--"}</p>
+						<div className="rounded-xl border border-slate-700/80 bg-slate-800/70 p-4 shadow-md">
+							<p className="text-xs uppercase tracking-widest text-slate-400">Logs Console</p>
+							<div className="mt-3">
+								<LogsConsole logs={logs} />
+							</div>
 						</div>
-					</DashboardCard>
-					<DashboardCard title="Logs Console" subtitle="Live feed">
-						<div
-							ref={logRef}
-							onScroll={() => {
-								const container = logRef.current;
-								if (!container) return;
-								const distanceFromBottom =
-									container.scrollHeight -
-									container.scrollTop -
-									container.clientHeight;
-								autoScrollRef.current = distanceFromBottom < 48;
-							}}
-							className="h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 p-3 font-mono text-[11px] text-slate-300"
-						>
-							{logs.length === 0 ? (
-								<p className="text-slate-500">Waiting for log events...</p>
-							) : (
-								logs.map((log, index) => (
-									<p
-										key={`${log.timestamp}-${index}`}
-										className={
-											index % 2 === 0
-												? "text-slate-300"
-												: "text-slate-400"
-										}
-									>
-										[{new Date(log.timestamp).toLocaleTimeString()}] {log.message}
-									</p>
-								))
-							)}
-							<div ref={logEndRef} />
-						</div>
-					</DashboardCard>
+					</div>
 				</div>
 			</div>
 		</DashboardLayout>

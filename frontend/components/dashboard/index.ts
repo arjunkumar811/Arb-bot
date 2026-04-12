@@ -5,3 +5,7 @@ export { ProfitCard } from "./ProfitCard";
 export { ProfitChart } from "./ProfitChart";
 export { QuoteCard } from "./QuoteCard";
 export { StatusCard } from "./StatusCard";
+export { LogsConsole } from "./LogsConsole";
+export { StatsCard } from "./StatsCard";
+export { StatusBadge } from "./StatusBadge";
+export { WalletCard } from "./WalletCard";

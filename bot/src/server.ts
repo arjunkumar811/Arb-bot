@@ -1,3 +1,4 @@
+import { loadEnv } from "./config/loadEnv";
 import cors from "cors";
 import express from "express";
 import fs from "fs";
@@ -5,7 +6,9 @@ import http from "http";
 import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
 import { writeRuntimeSettings } from "./config/runtime";
+loadEnv();
 import { startBot, stopBot } from "./bot/bot";
+import { setSimulationEnabled, startSocketServer } from "./socketServer";
 
 const PORT = Number(process.env.API_PORT ?? 3001);
 const LOG_FILE =
@@ -49,6 +52,7 @@ type Trade = {
 type WalletInitPayload = {
 	wallet: string;
 	usdcAccount: string;
+	usdtAccount?: string;
 };
 
 type LogEntry = {
@@ -251,6 +255,7 @@ app.post("/api/stop", (_req, res) => {
 
 app.post("/api/simulation", (req, res) => {
 	simulationEnabled = Boolean(req.body?.enabled);
+	setSimulationEnabled(simulationEnabled);
 	res.status(200).json({ ok: true, enabled: simulationEnabled });
 });
 
@@ -263,7 +268,8 @@ app.post("/api/settings", (req, res) => {
 });
 
 const handleWalletInit = (req: express.Request, res: express.Response) => {
-	const { wallet, usdcAccount } = (req.body as WalletInitPayload) ?? {};
+	const { wallet, usdcAccount, usdtAccount } =
+		(req.body as WalletInitPayload) ?? {};
 
 	if (!wallet || !usdcAccount) {
 		res.status(400).json({ error: "wallet, usdcAccount required" });
@@ -271,14 +277,19 @@ const handleWalletInit = (req: express.Request, res: express.Response) => {
 	}
 
 	process.env.INPUT_TOKEN_ACCOUNT = usdcAccount;
+	if (usdtAccount) {
+		process.env.OUTPUT_TOKEN_ACCOUNT = usdtAccount;
+	}
 
 	updateEnvFile({
 		INPUT_TOKEN_ACCOUNT: usdcAccount,
+		...(usdtAccount ? { OUTPUT_TOKEN_ACCOUNT: usdtAccount } : {}),
 	});
 
 	writeRuntimeSettings({
 		wallet,
 		inputTokenAccount: usdcAccount,
+		...(usdtAccount ? { outputTokenAccount: usdtAccount } : {}),
 	});
 
 	res.status(200).json({ ok: true });
@@ -312,6 +323,8 @@ setInterval(() => {
 	broadcast({ type: "status", payload: snapshot.status });
 	broadcast({ type: "profit", payload: snapshot.profit });
 }, 5000);
+
+startSocketServer();
 
 server.listen(PORT, () => {
 	console.log(`API server listening on http://localhost:${PORT}`);

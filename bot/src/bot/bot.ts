@@ -1,5 +1,5 @@
 import { TOKENS } from "../config/tokens";
-import { settings } from "../config/settings";
+import { getSettings } from "../config/settings";
 import { logFailure, logInfo, logProfit } from "../utils/logger";
 import { evaluateArbitrage } from "./arbitrageEngine";
 import { executePipeline } from "./executionManager";
@@ -51,6 +51,14 @@ function cancelDelay(): void {
 }
 
 async function runCycle(): Promise<void> {
+	const settings = getSettings();
+	const demoQuotesOnly =
+		process.env.DEMO_QUOTES_ONLY?.toLowerCase() === "true";
+	const useMockQuotes =
+		process.env.USE_MOCK_QUOTES?.toLowerCase() === "true";
+	logInfo("Starting arbitrage scan...");
+	logInfo(`RPC: ${process.env.RPC_URL ?? ""}`);
+	logInfo(`Using mock mode: ${useMockQuotes}`);
 	const pairs: ScanPair[] = [
 		{
 			baseMint: TOKENS.USDC.mint,
@@ -73,6 +81,11 @@ async function runCycle(): Promise<void> {
 
 	if (!best) {
 		logInfo("No profitable opportunity");
+		return;
+	}
+
+	if (demoQuotesOnly) {
+		logInfo("Demo mode: quotes only, execution skipped");
 		return;
 	}
 
@@ -106,7 +119,11 @@ async function runLoop(): Promise<void> {
 				await runCycle();
 			}
 		} catch (error) {
-			logFailure("Loop error", undefined, (error as Error).message);
+			const err = error as Error;
+			console.error("=== LOOP ERROR ===");
+			console.error("Message:", err?.message);
+			console.error("Stack:", err?.stack);
+			logInfo(`Loop error: ${err?.message ?? String(error)}`);
 		} finally {
 			executing = false;
 			emitExecutionState();
@@ -116,6 +133,7 @@ async function runLoop(): Promise<void> {
 			continue;
 		}
 
+		const settings = getSettings();
 		await interruptibleDelay(settings.loopDelayMs);
 	}
 

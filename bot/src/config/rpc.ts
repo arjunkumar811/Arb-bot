@@ -1,6 +1,9 @@
 import { Connection, Keypair, clusterApiUrl } from "@solana/web3.js";
 import fs from "fs";
 import path from "path";
+import { loadEnv } from "./loadEnv";
+
+loadEnv();
 
 const DEFAULT_RPC_URL = clusterApiUrl("devnet");
 

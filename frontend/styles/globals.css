@@ -31,6 +31,11 @@
 body {
 	@apply bg-slate-950 text-slate-100;
 	font-family: "Space Grotesk", system-ui, sans-serif;
+	background-image: radial-gradient(
+		circle at top,
+		rgba(30, 41, 59, 0.6),
+		rgba(2, 6, 23, 0.95) 55%
+	);
 }
 
 @layer base {
@@ -39,5 +44,21 @@ body {
 	}
 	body {
 		@apply bg-background text-foreground;
+	}
+}
+
+@layer utilities {
+	@keyframes fade-in {
+		0% {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+		100% {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	.animate-fade-in {
+		animation: fade-in 0.35s ease-out both;
 	}
 }

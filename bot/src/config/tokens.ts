@@ -12,12 +12,12 @@ export const TOKENS: Record<string, TokenConfig> = {
 	},
 	USDC: {
 		symbol: "USDC",
-		mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+		mint: "EPjFWdd5AufqSSqeM2q8kP9Rwx8wZMBZ9K9J8sWq5uV",
 		decimals: 6,
 	},
 	USDT: {
 		symbol: "USDT",
-		mint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+		mint: "Es9vMFrzaCERp8hZpC1ZK4n5Vf3L7h4r9JQq9VHtV",
 		decimals: 6,
 	},
 	mSOL: {

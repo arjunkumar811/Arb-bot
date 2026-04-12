@@ -21,11 +21,7 @@ async function fetchQuotesWithRetry(
 ): Promise<{ forward: SwapRoute; backward: SwapRoute; durationMs: number }> {
 	const start = Date.now();
 	const result = await retry(
-		() =>
-			withTimeout(
-				buildDualRoute(inputMint, outputMint, amount),
-				settings.quoteTimeoutMs
-				),
+		() => buildDualRoute(inputMint, outputMint, amount),
 		{
 			retries: 3,
 			delayMs: 500,

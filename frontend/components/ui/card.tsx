@@ -8,7 +8,7 @@ export function Card({
 	return (
 		<div
 			className={cn(
-				"rounded-2xl border border-border bg-cardui text-cardui-foreground",
+				"rounded-xl border border-slate-700/80 bg-slate-900/70 text-slate-100 shadow-md",
 				className
 			)}
 			{...props}
@@ -28,7 +28,7 @@ export function CardTitle({
 	...props
 }: HTMLAttributes<HTMLHeadingElement>): JSX.Element {
 	return (
-		<h3 className={cn("text-lg font-semibold", className)} {...props} />
+		<h3 className={cn("text-base font-semibold", className)} {...props} />
 	);
 }
 
