@@ -1,32 +1,30 @@
-import { PriceInfo } from './priceScanner';
-import { calculateProfit } from '../utils/math';
-import { MIN_PROFIT_THRESHOLD, MAX_SLIPPAGE } from '../config/settings';
-import { info } from '../utils/logger';
+const FLASH_LOAN_FEE = 0.05;
+const DEX_FEE = 0.10;
+const NETWORK_FEE = 0.02;
+const MIN_PROFIT_THRESHOLD = 0.2;
 
-export interface Opportunity {
-  profit: number;
-  buyAmount: number;
-  sellAmount: number;
+export interface OpportunityResult {
+  rawProfit: number;
+  totalFees: number;
+  netProfit: number;
   isProfitable: boolean;
 }
 
-export function detectOpportunity(prices: PriceInfo): Opportunity {
-  // Example: buy SOL, sell USDC
-  const buyAmount = prices.buyPrice;
-  const sellAmount = prices.sellPrice;
-  const flashLoanFee = 0.0003 * buyAmount; // Example fee
-  const dexFees = 0.0005 * buyAmount; // Example DEX fee
-  const networkFees = 0.0001 * buyAmount; // Example network fee
-  const profit = calculateProfit({
-    sellAmount,
-    buyAmount,
-    flashLoanFee,
-    dexFees,
-    networkFees,
-  });
-  const isProfitable = profit > MIN_PROFIT_THRESHOLD;
-  if (isProfitable) {
-    info('Opportunity detected', { profit, buyAmount, sellAmount });
-  }
-  return { profit, buyAmount, sellAmount, isProfitable };
+export function checkOpportunity(buyPrice: number, sellPrice: number): OpportunityResult {
+  const rawProfit = sellPrice - buyPrice;
+  const totalFees = FLASH_LOAN_FEE + DEX_FEE + NETWORK_FEE;
+  const netProfit = rawProfit - totalFees;
+  const isProfitable = netProfit > MIN_PROFIT_THRESHOLD;
+
+  console.log(`Raw Profit: ${rawProfit.toFixed(2)}`);
+  console.log(`Total Fees: ${totalFees.toFixed(2)}`);
+  console.log(`Net Profit: ${netProfit.toFixed(2)}`);
+  console.log(`Profitable: ${isProfitable}`);
+
+  return {
+    rawProfit,
+    totalFees,
+    netProfit,
+    isProfitable,
+  };
 }
