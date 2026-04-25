@@ -12,3 +12,7 @@ export function getConnection(): Connection {
   if (!process.env.SOLANA_RPC_URL) throw new Error('SOLANA_RPC_URL env not set');
   return new Connection(process.env.SOLANA_RPC_URL, 'confirmed');
 }
+
+
+
+
